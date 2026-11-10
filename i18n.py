@@ -44,6 +44,7 @@ IT = {
     "Limit {agent.limits.1.label}  {agent.limits.1.pct:.0f}%": "Limite {agent.limits.1.label}  {agent.limits.1.pct:.0f}%",
     "Agent mascot": "Mascotte agente", "Agent (field)": "Agente (campo)", "Working when (field)": "Al lavoro se (campo)",
     "Colour (auto = agent colour)": "Colore (auto = colore dell'agente)",
+    "Claude image (optional)": "Immagine Claude (facoltativa)", "Codex image (optional)": "Immagine Codex (facoltativa)",
     # --- page names
     "Clock": "Orologio", "System": "Sistema", "Media": "Media", "Weather": "Meteo", "Markets": "Mercati",
     "Hardware": "Hardware", "Agents": "Agenti", "Agenda": "Agenda", "Notifications": "Notifiche",

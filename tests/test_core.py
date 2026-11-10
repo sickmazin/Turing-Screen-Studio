@@ -121,6 +121,18 @@ class Liveness(unittest.TestCase):
         self.assertEqual(live, Counter({os.path.normcase("C:/Work/A"): 1, os.path.normcase("C:/Work/B"): 1}))
 
 
+class MascotImage(unittest.TestCase):
+    def test_own_image_replaces_the_pixel_icon_for_that_agent_only(self):
+        from widgets import CLAUDE_ORANGE, draw_all
+        paths.ASSETS.mkdir(parents=True, exist_ok=True)
+        Image.new("RGB", (40, 40), (255, 0, 255)).save(paths.ASSETS / "logo.png")
+        w = {"type": "mascot", "x": 0, "y": 0, "w": 60, "h": 60, "codex_image": "logo.png"}
+        for agent, expected in (("Codex", (255, 0, 255)), ("Claude", CLAUDE_ORANGE)):
+            img = Image.new("RGB", (60, 60))
+            draw_all(img, [w], {"agent": {"agent": agent, "busy": False}, "_t": 1.0})
+            self.assertIn(expected, {c for _n, c in img.getcolors(4096)}, agent)
+
+
 class Calendar(unittest.TestCase):
     def test_recurring_events_are_expanded(self):
         now = datetime.now().astimezone()

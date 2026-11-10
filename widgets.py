@@ -749,14 +749,30 @@ MASCOT = ["..##########..", "..##########..", "..###E##E###..", "..###E##E###.."
           "##############", "..##########.."]
 LEGS = (["..#.#....#.#..", "..#.#....#.#.."], ["...#.#..#.#...", "...#.#..#.#..."])
 EYE = (24, 22, 20)
+# Codex: a terminal window with a ">_" prompt; C = cursor, blinking
+PROMPT = [".############.", "##############", "##E###########", "###E##########", "##E###CCCC####", "##############",
+          ".############."]
+
+
+def sprite(agent, busy, t):
+    """Pixel rows for this instant, and whether the sprite bobs up this frame."""
+    if agent == "Codex":
+        on = int(t * (4 if busy else 1.2)) % 2 == 0
+        return [r.replace("C", "E" if on else "#") for r in PROMPT], False
+    step = int(t * 4) % 2 if busy else 0
+    rows = MASCOT + LEGS[step]
+    if not busy and (t % 3.7) < 0.18:  # blink: eyes become a thin line
+        rows = [r.replace("E", "#") if i == 2 else r for i, r in enumerate(rows)]
+    return rows, bool(step)
 
 
 @widget
 class Mascot(Widget):
-    """Little pixel creature in the agent's colour: walks while the agent works, blinks while it waits."""
+    """The agent's icon: a walking pixel creature for Claude, a blinking ">_" prompt for Codex, or your own image."""
     type, label, size, needs, animated = "mascot", "Agent mascot", (112, 72), ("agents",), True
     props = [("agent", "field", "agent.agent", "Agent (field)"), ("busy", "field", "agent.busy", "Working when (field)"),
-             ("color", "text", "auto", "Colour (auto = agent colour)")]
+             ("color", "text", "auto", "Colour (auto = agent colour)"),
+             ("claude_image", "file", "", "Claude image (optional)"), ("codex_image", "file", "", "Codex image (optional)")]
 
     @classmethod
     def draw(cls, img, d, box, w, state):
@@ -768,13 +784,16 @@ class Mascot(Widget):
         spec = str(cls.p(w, "color"))
         body = AGENT_COLORS.get(agent, CLAUDE_ORANGE) if spec in ("", "auto") else color(spec)
         t = now(state)
-        rows = MASCOT + LEGS[int(t * 4) % 2 if busy else 0]
-        if not busy and (t % 3.7) < 0.18:  # blink: eyes become a thin line
-            rows = [r.replace("E", "#") if i == 2 else r for i, r in enumerate(rows)]
+        own = w.get(f"{str(agent).lower()}_image")
+        if own:  # the user's picture (still or animated), bobbing while the agent works
+            bob = -2 if busy and int(t * 4) % 2 else 0
+            Picture.draw(img, d, (x0, y0 + bob, x1, y1 + bob), {"file": own, "fit": "contain"}, state)
+            return
+        rows, up = sprite(agent, busy, t)
         cols = len(rows[0])
         px = max(1, min((x1 - x0) // cols, (y1 - y0) // (len(rows) + 1)))
         ox = x0 + ((x1 - x0) - cols * px) // 2
-        oy = y0 + ((y1 - y0) - len(rows) * px) // 2 + (-(px // 2) if busy and int(t * 4) % 2 else 0)  # bob while walking
+        oy = y0 + ((y1 - y0) - len(rows) * px) // 2 - (px // 2 if up else 0)  # bob while walking
         for r, row in enumerate(rows):
             for c, ch in enumerate(row):
                 if ch != ".":
