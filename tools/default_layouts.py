@@ -127,54 +127,49 @@ media = {"name": "Media",
                *media_bits(320, 278, 144)]}
 
 
-# --- claude
+# --- coding agent: one copy of this page per active session (Claude Code, Codex, Gemini CLI)
 def stats(x, y, cw):
-    cells = [("{claude.0.output_tokens:human}", "output"), ("{claude.0.turns}", "turns"),
-             ("${claude.0.cost:.2f}", "cost{claude.0.cost:hide}")]
+    cells = [("{agent.output_tokens:human}", "output"), ("{agent.turns}", "turns"),
+             ("${agent.cost:.2f}", "cost{agent.cost:hide}")]
     out = []
     for i, (v, lab) in enumerate(cells):
         out += [T(x + i * cw, y, cw, 26, v, 20, True, align="center"),
                 T(x + i * cw, y + 26, cw, 16, lab, 12, color="muted", align="center")]
-    return out
+    return group("stats", out)
 
 
 def limits(x, y, w):
     out = []
-    for i, (key, label) in enumerate((("five_hour", "5 h"), ("seven_day", "7 days"))):
-        f = f"claude.0.rate_limits.{key}"
-        yy = y + i * 40
-        out += group(f"limit-{key}", [
-            T(x, yy, w - 110, 20, "Limit " + label + "  {" + f + ".used_percentage:.0f}%", 13, True),
+    for i in range(2):
+        f = f"agent.limits.{i}"
+        yy = y + i * 38
+        out += group(f"limit-{i}", [
+            T(x, yy, w - 110, 20, "Limit {" + f + ".label}  {" + f + ".pct:.0f}%", 13, True),
             T(x + w - 110, yy, 110, 20, "reset {" + f + ".resets_at:reset}", 12, color="muted", align="right"),
-            W("bar", x, yy + 22, w, 8, field=f + ".used_percentage", max="100", color="level", bg="card")])
+            W("bar", x, yy + 22, w, 8, field=f + ".pct", max="100", color="level", bg="card")])
     return out
 
 
 def ring(x, y, s):
     return group("context", [
-        W("ring", x, y, s, s, field="claude.0.context_pct", max="100", thickness=14, color="level", bg="card"),
-        T(x, y + s // 2 - 30, s, 44, "{claude.0.context_pct:.0f}%", 38, True, align="center"),
-        T(x, y + s // 2 + 14, s, 20, "{claude.0.context:human} / {claude.0.window:human}", 13, color="muted", align="center"),
+        W("ring", x, y, s, s, field="agent.context_pct", max="100", thickness=14, color="level", bg="card"),
+        T(x, y + s // 2 - 30, s, 44, "{agent.context_pct:.0f}%", 38, True, align="center"),
+        T(x, y + s // 2 + 14, s, 20, "{agent.context:human} / {agent.window:human}", 13, color="muted", align="center"),
         T(x, y + s + 4, s, 18, "context", 13, color="muted", align="center")])
 
 
-def who(screen_w, w):
-    return [*header("CLAUDE CODE", screen_w),
-            W("dot", 16, 44, 10, 10, field="claude.0.busy", on="#d97757", off="good"),
-            T(34, 36, w - 50, 26, "{claude.0.project}", 20, True, fallback="No active session"),
-            T(16, 62, w - 32, 20, "{claude.0.model_name}", 14, color="muted")]
+def who(x, w):
+    return group("who", [T(x, 36, w, 28, "{agent.project}", 20, True, fallback="No active session"),
+                         T(x, 64, w, 20, "{agent.model}", 13, color="muted")])
 
 
-claude = {"name": "Claude Code",
- "portrait": [*who(320, 320), *ring(88, 90, 144), *stats(16, 262, 96), *limits(16, 312, 288),
-              W("sessions", 12, 394, 296, 84, start=1, row=30)],
- "landscape": [*who(480, 200), *ring(25, 92, 150), *stats(200, 36, 88), *limits(200, 98, 264),
-               W("sessions", 200, 182, 264, 128, start=1, row=30)]}
-
-# --- all agents
-agents = {"name": "Agents",
- "portrait": [*header("AGENTS", 320), W("agents", 12, 40, 296, 432, start=0, row=52)],
- "landscape": [*header("AGENTS", 480), W("agents", 12, 36, 456, 276, start=0, row=46)]}
+agent = {"name": "Agent", "per_agent": True,
+ "portrait": [*header("{agent.title}", 320), W("mascot", 12, 34, 116, 68, agent="agent.agent", busy="agent.busy", color="auto"),
+              *who(136, 168), *ring(88, 110, 144), *stats(16, 284, 96), *limits(16, 332, 288),
+              W("agents", 12, 410, 296, 66, start=0, row=34)],
+ "landscape": [*header("{agent.title}", 480), W("mascot", 10, 32, 108, 64, agent="agent.agent", busy="agent.busy", color="auto"),
+               *who(126, 338), *ring(24, 104, 140), *stats(200, 92, 88), *limits(200, 142, 264),
+               W("agents", 200, 222, 264, 92, start=0, row=30)]}
 
 # --- weather with animation
 DET = "feels {weather.feels:.0f}° · humidity {weather.humidity}% · wind {weather.wind:.0f} km/h"
@@ -208,7 +203,7 @@ notifications = {"name": "Notifications",
 
 if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
-    for page_id, data in dict(clock=clock, system=system, hardware=hardware, media=media, claude=claude, agents=agents,
+    for page_id, data in dict(clock=clock, system=system, hardware=hardware, media=media, claude=agent,
                               weather=weather, stocks=stocks, agenda=agenda, notifications=notifications).items():
         (OUT / f"{page_id}.json").write_text(json.dumps(data, indent=1, ensure_ascii=False), encoding="utf-8")
     print("written", len(list(OUT.glob("*.json"))), "layouts to", OUT)

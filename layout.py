@@ -68,6 +68,9 @@ class LayoutPage:
                         needs.update(p.strip().split(".")[0] for p in found)
                 if w.get("type") == "history" and w.get("field"):
                     history.add(w["field"].strip())
+        self.per_agent = bool(data.get("per_agent"))
+        if self.per_agent:
+            needs.add("agents")
         self.needs = sorted(needs)
         self.history_fields = history
 
@@ -85,11 +88,54 @@ class LayoutPage:
     def animated(self, size) -> bool:
         return any(WIDGETS[w["type"]].is_animated(w) for w in self.widgets_for(size) if w.get("type") in WIDGETS)
 
-    def render(self, state, size, cfg, history=None):
+    def render(self, state, size, cfg, history=None, agent=None):
+        if self.per_agent:  # "agent.*" fields = the session this copy of the page is about (first one by default)
+            sessions = state.get("agents") or []
+            state = {**state, "agent": agent or (sessions[0] if sessions else None)}
         img = ui.canvas(size, self.name)
         draw_all(img, self.widgets_for(size), with_clock(state, history),
                  on_error=lambda w, e: log.warning("widget %s in %s: %r", w.get("type"), self.name, e))
         return img
+
+
+class AgentPage:
+    """One copy of a per-agent layout bound to one session. The key survives reordering of the session list."""
+    settings = {}
+
+    def __init__(self, page: LayoutPage, key):
+        self.page, self.key = page, key
+        self.name = f"{page.name}#{key}" if key else page.name
+        self.needs, self.history_fields = page.needs, page.history_fields
+
+    def session(self, state):
+        return next((s for s in state.get("agents") or [] if s.get("key") == self.key), None)
+
+    def label(self, state):
+        s = self.session(state)
+        return f"{s['agent']} · {s['project']}" if s else self.page.title
+
+    title = property(lambda self: self.page.title)
+
+    def widgets_for(self, size):
+        return self.page.widgets_for(size)
+
+    def animated(self, size):
+        return self.page.animated(size)
+
+    def render(self, state, size, cfg, history=None):
+        return self.page.render(state, size, cfg, history, agent=self.session(state))
+
+
+def expand_pages(pages, state, limit=4):
+    """Per-agent layouts become one page per active session (at least one, showing 'no session')."""
+    out = []
+    for p in pages:
+        if getattr(p, "per_agent", False):
+            keys = [s["key"] for s in (state.get("agents") or [])[:limit] if s.get("key")]
+            out += [AgentPage(p, k) for k in keys] or [AgentPage(p, None)]
+        else:
+            out.append(p)
+    return out
 
 
 class HistoryRecorder:

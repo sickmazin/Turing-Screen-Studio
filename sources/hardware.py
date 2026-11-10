@@ -45,7 +45,8 @@ def _open():
         _error = repr(e)
         logging.getLogger("studio").warning("hardware sensors unavailable: %s", _error)
     else:
-        logging.getLogger("studio").info("hardware sensors ready (administrator: %s)", is_admin())
+        logging.getLogger("studio").info("hardware sensors ready (administrator: %s, PawnIO: %s)", is_admin(),
+                                         pawnio_installed())
     return _computer
 
 
@@ -76,7 +77,7 @@ def read():
         if not c:
             return {"error": _error, "admin": is_admin()}
         all_hw = [h for top in c.Hardware for h in _walk(top)]
-    out = {"admin": is_admin(), "sensors": {}, "fans": []}
+    out = {"admin": is_admin(), "pawnio": pawnio_installed(), "sensors": {}, "fans": []}
     for h in all_hw:
         for s in h.Sensors:
             if s.Value is not None:
@@ -109,6 +110,20 @@ def read():
             avail = _sensor(ram, "Data", "Memory Available")
             out["ram"]["total"] = out["ram"]["used"] + (avail or 0)
     return out
+
+
+def pawnio_installed() -> bool:
+    """LibreHardwareMonitor 0.9.6 reads Ryzen/Intel CPU sensors through the PawnIO driver, found by its uninstall key."""
+    import winreg
+    for view in (winreg.KEY_WOW64_64KEY, winreg.KEY_WOW64_32KEY):
+        try:
+            winreg.CloseKey(winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                                           r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PawnIO", 0,
+                                           winreg.KEY_READ | view))
+            return True
+        except OSError:
+            continue
+    return False
 
 
 def is_admin() -> bool:

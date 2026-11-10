@@ -1,10 +1,12 @@
-"""All terminal coding agents in one list: Claude Code, OpenAI Codex CLI, Gemini CLI.
+"""Terminal coding agents in one list: Claude Code, OpenAI Codex CLI, Gemini CLI. Newest activity first.
 
-Each session: {agent, project, model, context, window, context_pct, busy, age, limit_pct}.
+Every session has the same shape, so one page layout works for all of them:
+  {key, agent, title, project, model, context, window, context_pct, busy, age,
+   output_tokens, turns, cost, limits: [{label, pct, resets_at}], limit_pct}
 Formats checked against real files:
-- Codex:  ~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl, event_msg/token_count with last_token_usage,
-          model_context_window and rate_limits.primary.used_percent
-- Gemini: ~/.gemini/tmp/<project>/chats/session-*.jsonl, messages of type "gemini" with tokens.input
+- Codex:  ~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl: session_meta (cwd), turn_context (model),
+          event_msg task_started/task_complete (turns, working), token_count (context, window, rate limits)
+- Gemini: ~/.gemini/tmp/<project>/chats/session-*.jsonl: messages of type "user" / "gemini" with tokens
 """
 import asyncio
 import json
@@ -15,10 +17,11 @@ from sources import claude
 
 name = "agents"
 settings = {"active_minutes": 30, "gemini_context_window": 1000000}
-interval = 5
+interval = 3
 
 CODEX = Path.home() / ".codex" / "sessions"
 GEMINI = Path.home() / ".gemini" / "tmp"
+TITLES = {"Claude": "CLAUDE CODE", "Codex": "CODEX", "Gemini": "GEMINI CLI"}
 _cache = {}
 
 
@@ -30,8 +33,16 @@ def _cached(path, parse):
     return hit[1]
 
 
+def window_label(minutes):
+    if not minutes:
+        return ""
+    return f"{minutes // 1440} d" if minutes >= 1440 else f"{minutes // 60} h" if minutes >= 60 else f"{minutes} min"
+
+
 def parse_codex(path: Path) -> dict:
-    s = {"agent": "Codex", "project": "", "model": "", "context": 0, "window": 0, "limit_pct": None}
+    s = {"agent": "Codex", "project": "", "model": "", "context": 0, "window": 0, "output_tokens": 0, "turns": 0,
+         "limits": [], "working": False}
+    started = completed = 0
     with path.open(encoding="utf-8", errors="replace") as f:
         for line in f:
             try:
@@ -39,62 +50,88 @@ def parse_codex(path: Path) -> dict:
             except ValueError:
                 continue
             p = e.get("payload") or {}
+            kind = p.get("type")
             if e.get("type") == "session_meta" and p.get("cwd"):
                 s["project"] = Path(p["cwd"]).name
             elif e.get("type") == "turn_context" and p.get("model"):
                 s["model"] = p["model"]
-            elif p.get("type") == "token_count":
+            elif kind == "task_started":
+                started += 1
+            elif kind == "task_complete":
+                completed += 1
+            elif kind == "token_count":
                 info = p.get("info") or {}
-                last = info.get("last_token_usage") or {}
-                s["context"] = last.get("input_tokens", s["context"])
+                s["context"] = (info.get("last_token_usage") or {}).get("input_tokens", s["context"])
+                s["output_tokens"] = (info.get("total_token_usage") or {}).get("output_tokens", s["output_tokens"])
                 s["window"] = info.get("model_context_window") or s["window"]
-                primary = (p.get("rate_limits") or {}).get("primary") or {}
-                if isinstance(primary.get("used_percent"), (int, float)):
-                    s["limit_pct"] = primary["used_percent"]
+                rl = p.get("rate_limits") or {}
+                limits = [{"label": window_label(w.get("window_minutes")), "pct": w["used_percent"], "resets_at": w.get("resets_at")}
+                          for w in (rl.get("primary"), rl.get("secondary"))
+                          if isinstance(w, dict) and isinstance(w.get("used_percent"), (int, float))]
+                s["limits"] = limits or s["limits"]
+    s["turns"], s["working"] = started, started > completed
     return s
 
 
 def parse_gemini(path: Path) -> dict:
-    s = {"agent": "Gemini", "project": path.parent.parent.name, "model": "", "context": 0, "window": 0, "limit_pct": None}
+    s = {"agent": "Gemini", "project": path.parent.parent.name, "model": "", "context": 0, "window": 0,
+         "output_tokens": 0, "turns": 0, "limits": []}
     root = path.parent.parent / ".project_root"
     if root.exists():
         s["project"] = Path(root.read_text(encoding="utf-8").strip()).name or s["project"]
-
-    def visit(m):
-        if isinstance(m, dict) and m.get("type") == "gemini" and isinstance(m.get("tokens"), dict):
-            s["model"] = m.get("model") or s["model"]
-            s["context"] = m["tokens"].get("input", s["context"])
+    messages = {}
     with path.open(encoding="utf-8", errors="replace") as f:
         for line in f:
             try:
                 e = json.loads(line)
             except ValueError:
                 continue
-            for m in (e.get("$set") or {}).get("messages", []) + ([e] if "tokens" in e else []):
-                visit(m)
+            for m in (e.get("$set") or {}).get("messages", []) + ([e] if "type" in e and "id" in e else []):
+                if isinstance(m, dict):
+                    messages[m.get("id") or id(m)] = m  # the file rewrites the whole list: keep each message once
+    for m in messages.values():
+        if m.get("type") == "user":
+            s["turns"] += 1
+        elif m.get("type") == "gemini" and isinstance(m.get("tokens"), dict):
+            s["model"] = m.get("model") or s["model"]
+            s["context"] = m["tokens"].get("input", s["context"])
+            s["output_tokens"] += m["tokens"].get("output", 0)
     return s
+
+
+def from_claude(c: dict) -> dict:
+    rl = c.get("rate_limits") or {}
+    limits = [{"label": label, "pct": rl[k]["used_percentage"], "resets_at": rl[k].get("resets_at")}
+              for k, label in (("five_hour", "5 h"), ("seven_day", "7 d"))
+              if isinstance(rl.get(k), dict) and isinstance(rl[k].get("used_percentage"), (int, float))]
+    return {"agent": "Claude", "session_id": c["session_id"], "project": c["project"], "model": c["model_name"],
+            "context": c["context"], "window": c["window"], "context_pct": c["context_pct"], "busy": c["busy"],
+            "age": c["age"], "output_tokens": c["output_tokens"], "turns": c["turns"], "cost": c.get("cost"),
+            "limits": limits}
 
 
 def collect(cfg):
     now = time.time()
-    active = cfg.get("active_minutes", 30) * 60
-    out = []
-    for s in claude.collect({"active_minutes": cfg.get("active_minutes", 30)}):
-        limit = ((s.get("rate_limits") or {}).get("five_hour") or {}).get("used_percentage")
-        out.append({"agent": "Claude", "project": s["project"], "model": s["model_name"], "context": s["context"],
-                    "window": s["window"], "context_pct": s["context_pct"], "busy": s["busy"], "age": s["age"],
-                    "limit_pct": limit})
+    minutes = cfg.get("active_minutes", 30)
+    out = [from_claude(c) for c in claude.collect({"active_minutes": minutes})]
     for files, parse, window in ((CODEX.glob("*/*/*/*.jsonl"), parse_codex, 0),
                                  (GEMINI.glob("*/chats/*.jsonl"), parse_gemini, cfg.get("gemini_context_window", 1_000_000))):
         for p in files:
             age = now - p.stat().st_mtime
-            if age > active:
+            if age > minutes * 60:
                 continue
-            s = dict(_cached(p, parse), age=age, busy=age < 20)
+            s = dict(_cached(p, parse), age=age, session_id=p.stem)
+            if not (s["model"] or s["context"]):
+                continue
             s["window"] = s["window"] or window or 200_000
-            s["context_pct"] = s["context"] / s["window"] * 100 if s["window"] else 0
-            if s["model"] or s["context"]:
-                out.append(s)
+            s["context_pct"] = s["context"] / s["window"] * 100
+            s["busy"] = s.pop("working", False) and age < 600 or age < 20
+            s.setdefault("cost", None)
+            out.append(s)
+    for s in out:
+        s["key"] = f"{s['agent']}:{s['session_id']}"
+        s["title"] = TITLES.get(s["agent"], s["agent"].upper())
+        s["limit_pct"] = s["limits"][0]["pct"] if s["limits"] else None
     out.sort(key=lambda s: s["age"])
     return out
 

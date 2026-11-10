@@ -178,11 +178,44 @@ class Settings(tk.Tk):
         for key, text, default in (("key_next", "Next page shortcut", "ctrl+shift+right"),
                                    ("key_prev", "Previous page shortcut", "ctrl+shift+left")):
             r = label(text)
-            e = ttk.Entry(f, width=24)
-            e.insert(0, self.cfg.get(key, default))
-            e.grid(row=r, column=1, sticky="w")
-            e.bind("<FocusOut>", lambda ev, k=key, w=e: self.set(k, w.get().strip()))
-            e.bind("<Return>", lambda ev, k=key, w=e: self.set(k, w.get().strip()))
+            box = ttk.Frame(f)
+            box.grid(row=r, column=1, sticky="w")
+            var = tk.StringVar(value=self.cfg.get(key, default))
+            ttk.Label(box, textvariable=var, width=26, relief="sunken", padding=(6, 2)).pack(side="left")
+            btn = ttk.Button(box, text=_("Record…"))
+            btn.configure(command=lambda k=key, v=var, b=btn: self.record_hotkey(k, v, b))
+            btn.pack(side="left", padx=6)
+            ttk.Button(box, text=_("Default"), command=lambda k=key, v=var, d=default: (v.set(d), self.set(k, d))).pack(side="left")
+        ttk.Label(f, foreground="gray", text=_("Record: press the button, then the key combination (Esc cancels).")).grid(
+            row=row, column=0, columnspan=2, sticky="w")
+
+    def record_hotkey(self, key, var, btn):
+        """Capture the next key combination with the same library that will listen for it."""
+        btn.configure(text=_("Press the keys…"), state="disabled")
+
+        def work():
+            import keyboard
+            try:
+                hk = keyboard.read_hotkey(suppress=False)
+            except Exception:
+                hk = ""
+            self.after(0, lambda: done(hk))
+
+        def done(hk):
+            btn.configure(text=_("Record…"), state="normal")
+            if not hk or hk == "esc":
+                return
+            other = "key_prev" if key == "key_next" else "key_next"
+            if hk == self.cfg.get(other):
+                messagebox.showwarning(_("Shortcut"), _("This combination is already used by the other shortcut."))
+                return
+            solo = "+" not in hk and not (hk.startswith("f") and hk[1:].isdigit()) and hk not in ("pause", "scroll lock")
+            if solo and not messagebox.askyesno(_("Shortcut"), _("A single key will also change page every time you use "
+                                                                 "it for something else. Use it anyway?") + f"\n{hk}"):
+                return
+            var.set(hk)
+            self.set(key, hk)
+        threading.Thread(target=work, daemon=True).start()
 
     # --- Pages (editor) -------------------------------------------------
     def build_pages(self, f):
@@ -201,10 +234,16 @@ class Settings(tk.Tk):
         scroll.pack(side="right", fill="y")
         canvas.bind_all("<MouseWheel>", lambda e: canvas.yview_scroll(-e.delta // 120, "units"))
         ttk.Label(inner, foreground="gray", text=_("Settings of the data sources used by the widgets.")).pack(anchor="w", pady=(0, 8))
-        admin = service.is_admin()
-        ttk.Label(inner, foreground="green" if admin else "#b06000", text=_(
-            "Hardware sensors: complete (running as administrator)." if admin else
-            "Hardware sensors: CPU temperatures need the app to run as administrator.")).pack(anchor="w", pady=(0, 8))
+        from sources import hardware
+        if not service.is_admin():
+            ok, msg = False, "Hardware sensors: CPU temperatures need the app to run as administrator."
+        elif not hardware.pawnio_installed():
+            ok, msg = False, ("Hardware sensors: CPU temperatures and power need the free PawnIO driver used by "
+                              "LibreHardwareMonitor. Install it from pawnio.eu, then restart the app.")
+        else:
+            ok, msg = True, "Hardware sensors: complete (running as administrator)."
+        ttk.Label(inner, foreground="green" if ok else "#b06000", wraplength=700, justify="left", text=_(msg)).pack(
+            anchor="w", pady=(0, 8))
         for name in sorted(self.all_sources, key=lambda n: _(SOURCE_LABELS.get(n, n))):
             if self.section(name):
                 box = ttk.LabelFrame(inner, text=_(SOURCE_LABELS.get(name, name)), padding=8)

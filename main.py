@@ -78,7 +78,8 @@ class App:
         self.tasks = {}
         self.all_pages = load_pages()
         self.all_sources = load(sources)
-        self.pages = []
+        self.pages = []   # pages in config order
+        self.view = []    # pages as shown: per-agent layouts expanded to one page per session
         self.screen = Screen()
         self.idx = 0
         self.last_switch = time.monotonic()
@@ -128,9 +129,10 @@ class App:
         unknown = [n for n in names if n not in self.all_pages]
         if unknown:
             log.warning("unknown pages ignored: %s", unknown)
-        current = self.pages[self.idx].name if self.pages else None
+        current = self.view[self.idx].name if self.idx < len(self.view) else None
         self.pages = [self.all_pages[n] for n in names if n in self.all_pages] or list(self.all_pages.values())[:1]
-        self.idx = next((i for i, p in enumerate(self.pages) if p.name == current), min(self.idx, len(self.pages) - 1))
+        self.view = []
+        self.refresh_view(current)
 
         needed = {n for p in self.pages for n in p.needs if n in self.all_sources}
         for n in set(self.tasks) - needed:
@@ -163,6 +165,23 @@ class App:
         if self.icon:
             self.icon.menu = tray_menu(self)
 
+    def refresh_view(self, current=None):
+        """Recompute the shown pages (sessions come and go) while staying on the page being shown."""
+        if current is None and self.idx < len(self.view):
+            current = self.view[self.idx].name
+        view = layout.expand_pages(self.pages, self.state, int(self.cfg.get("max_agent_pages", 4)))
+        names = [p.name for p in view]
+        if names == [p.name for p in self.view]:
+            return
+        self.view = view
+        if current in names:
+            self.idx = names.index(current)
+        else:  # e.g. the session of this page ended: stay on the same layout
+            base = (current or "").split("#")[0]
+            self.idx = next((i for i, n in enumerate(names) if n.split("#")[0] == base), min(self.idx, len(view) - 1))
+        if self.icon:
+            self.icon.menu = tray_menu(self)
+
     # --- navigation (callable from other threads: keyboard, tray) -------
     def call(self, fn):
         def run():
@@ -172,13 +191,13 @@ class App:
 
     def go(self, step: int):
         def _go():
-            self.idx = (self.idx + step) % len(self.pages)
+            self.idx = (self.idx + step) % len(self.view)
             self.last_switch = time.monotonic()
         self.call(_go)
 
     def go_to(self, name: str):
         def _go():
-            for i, p in enumerate(self.pages):
+            for i, p in enumerate(self.view):
                 if p.name == name:
                     self.idx, self.last_switch = i, time.monotonic()
         self.call(_go)
@@ -196,13 +215,13 @@ class App:
         media = self.state.get("media")
         playing = bool(media and media["playing"])
         if self.cfg.get("media_focus", True) and playing and not self.was_playing:
-            for i, p in enumerate(self.pages):
+            for i, p in enumerate(self.view):
                 if p.name == "media":
                     self.idx, self.last_switch = i, time.monotonic()
         self.was_playing = playing
         rotate = self.cfg.get("rotate_seconds", 0)
         if rotate and time.monotonic() - self.last_switch >= rotate:
-            self.idx = (self.idx + 1) % len(self.pages)
+            self.idx = (self.idx + 1) % len(self.view)
             self.last_switch = time.monotonic()
 
     def read_control(self):
@@ -218,7 +237,8 @@ class App:
         if page in self.all_pages:
             if page not in [p.name for p in self.pages]:
                 self.pages.append(self.all_pages[page])  # shown until the next config change
-            self.idx = [p.name for p in self.pages].index(page)
+                self.refresh_view()
+            self.idx = next(i for i, p in enumerate(self.view) if p.name.split("#")[0] == page)
             self.last_switch = time.monotonic()
 
     # --- main loop ------------------------------------------------------
@@ -245,10 +265,11 @@ class App:
         if self.screen_off:
             self.screen.power(True)
             self.screen_off, self.prev = False, None
+        self.refresh_view()
         self.auto_switch()
-        page = self.pages[self.idx]
+        page = self.view[self.idx]
         try:
-            if isinstance(page, layout.LayoutPage):
+            if isinstance(page, (layout.LayoutPage, layout.AgentPage)):
                 img = page.render(self.state, self.screen.size, {}, self.history_view)
             else:
                 img = page.render(layout.with_clock(self.state, self.history_view), self.screen.size, self.section(page.name))
@@ -291,8 +312,8 @@ class App:
                 self.screen_missing()
                 await asyncio.sleep(3)
                 continue
-            page = self.pages[self.idx]
-            animated = isinstance(page, layout.LayoutPage) and page.animated(self.screen.size) and not self.screen_off
+            page = self.view[self.idx]
+            animated = hasattr(page, "animated") and page.animated(self.screen.size) and not self.screen_off
             fps = max(1, min(15, int(self.cfg.get("animation_fps", 8))))
             timeout = 1 / fps if animated else 1 - time.time() % 1  # one tick per second, aligned for clocks
             self.wake.clear()
@@ -323,13 +344,14 @@ def tray_menu(app: App):
     import pystray
     _ = i18n._
     def page_item(p):  # pystray counts the action's arguments, so no default-argument lambdas
-        return pystray.MenuItem(getattr(p, "title", p.name), lambda icon, item: app.go_to(p.name),
-                                checked=lambda item: bool(app.pages) and app.pages[app.idx].name == p.name, radio=True)
+        text = p.label(app.state) if isinstance(p, layout.AgentPage) else getattr(p, "title", p.name)
+        return pystray.MenuItem(text, lambda icon, item: app.go_to(p.name),
+                                checked=lambda item: app.idx < len(app.view) and app.view[app.idx].name == p.name, radio=True)
 
     def bright_item(v):
         return pystray.MenuItem(f"{v}%", lambda icon, item: app.set_brightness(v),
                                 checked=lambda item: app.cfg.get("brightness") == v, radio=True)
-    page_items = [page_item(p) for p in app.pages] or [pystray.MenuItem("-", None, enabled=False)]
+    page_items = [page_item(p) for p in app.view] or [pystray.MenuItem("-", None, enabled=False)]
     bright_items = [bright_item(v) for v in (10, 25, 40, 60, 80, 100)]
     return pystray.Menu(
         pystray.MenuItem(_("Settings"), lambda: service.open_settings(), default=True),

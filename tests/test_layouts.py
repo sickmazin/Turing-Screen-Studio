@@ -33,9 +33,15 @@ def sample_state():
         "media": {"title": "Bohemian Rhapsody", "artist": "Queen", "album": "A Night at the Opera",
                   "position": 3599, "duration": 3599, "playing": True, "cover": cover},
         "claude": [session, dict(session, project="another-project", busy=False)],
-        "agents": [{"agent": "Claude", "project": "turing-screen-studio", "model": "claude-opus-5-5", "context_pct": 21.8,
-                    "busy": True, "limit_pct": 42}, {"agent": "Codex", "project": "Blockchain-GNN", "model": "gpt-6-luna",
-                                                     "context_pct": 40.5, "busy": False, "limit_pct": 72}],
+        "agents": [dict(agent="Claude", key="Claude:1", title="CLAUDE CODE", model="claude-opus-5-5",
+                        limits=[{"label": "5 h", "pct": 42, "resets_at": 1999999999},
+                                {"label": "7 d", "pct": 64, "resets_at": 1999999999}], limit_pct=42, **{
+                            k: session[k] for k in ("project", "context", "window", "context_pct", "output_tokens",
+                                                    "turns", "cost", "busy", "age")}),
+                   {"agent": "Codex", "key": "Codex:2", "title": "CODEX", "project": "Blockchain-GNN", "model": "gpt-6-luna",
+                    "context": 104_000, "window": 258_400, "context_pct": 40.5, "output_tokens": 24_000, "turns": 8,
+                    "cost": None, "busy": False, "age": 60, "limit_pct": 72,
+                    "limits": [{"label": "30 d", "pct": 72, "resets_at": 1999999999}]}],
         "weather": {"city": "Milano", "temp": -10, "feels": -14, "humidity": 100, "wind": 120, "code": 95, "is_day": True,
                     "days": [{"date": str(today + timedelta(days=i)), "code": 61, "max": -10, "min": -20, "rain": 100}
                              for i in range(5)]},
@@ -106,7 +112,30 @@ class DefaultLayouts(unittest.TestCase):
         pages = {f.stem: layout.LayoutPage(f.stem, json.loads(f.read_text(encoding="utf-8"))) for f in self.files}
         self.assertTrue(pages["weather"].animated((320, 480)))
         self.assertTrue(pages["media"].animated((480, 320)))
+        self.assertTrue(pages["claude"].animated((320, 480)))  # the mascot
         self.assertFalse(pages["clock"].animated((320, 480)))
+
+
+class AgentPages(unittest.TestCase):
+    def test_one_page_per_session_and_one_when_none(self):
+        data = json.loads((DEFAULTS / "claude.json").read_text(encoding="utf-8"))
+        page = layout.LayoutPage("claude", data)
+        clock = layout.LayoutPage("clock", {"portrait": []})
+        state = sample_state()
+        view = layout.expand_pages([clock, page], state)
+        self.assertEqual([p.name for p in view], ["clock", "claude#Claude:1", "claude#Codex:2"])
+        self.assertEqual(view[2].session(state)["agent"], "Codex")
+        self.assertEqual([p.name for p in layout.expand_pages([page], {})], ["claude"])
+        self.assertEqual(len(layout.expand_pages([page], state, limit=1)), 1)
+
+    def test_page_follows_its_session_when_the_list_reorders(self):
+        page = layout.LayoutPage("claude", json.loads((DEFAULTS / "claude.json").read_text(encoding="utf-8")))
+        state = sample_state()
+        codex = layout.expand_pages([page], state)[1]
+        state["agents"].reverse()
+        self.assertEqual(codex.session(state)["agent"], "Codex")
+        img = codex.render(state, (320, 480), {})
+        self.assertEqual(img.size, (320, 480))
 
 
 if __name__ == "__main__":

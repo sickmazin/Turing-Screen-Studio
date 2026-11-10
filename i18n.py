@@ -38,7 +38,12 @@ IT = {
     "Clear": "Sereno", "Mostly clear": "Poco nuvoloso", "Partly cloudy": "Parz. nuvoloso", "Overcast": "Coperto",
     "Fog": "Nebbia", "Drizzle": "Pioviggine", "Rain": "Pioggia", "Snow": "Neve", "Thunderstorm": "Temporale",
     "CPU temp": "Temp. CPU", "GPU temp": "Temp. GPU", "GPU load": "Carico GPU", "CPU load": "Carico CPU",
-    "Requires administrator": "Serve amministratore",
+    "Requires administrator": "Serve amministratore", "limit": "limite", "Agent": "Agente",
+    "cost{agent.cost:hide}": "costo{agent.cost:hide}",
+    "Limit {agent.limits.0.label}  {agent.limits.0.pct:.0f}%": "Limite {agent.limits.0.label}  {agent.limits.0.pct:.0f}%",
+    "Limit {agent.limits.1.label}  {agent.limits.1.pct:.0f}%": "Limite {agent.limits.1.label}  {agent.limits.1.pct:.0f}%",
+    "Agent mascot": "Mascotte agente", "Agent (field)": "Agente (campo)", "Working when (field)": "Al lavoro se (campo)",
+    "Colour (auto = agent colour)": "Colore (auto = colore dell'agente)",
     # --- page names
     "Clock": "Orologio", "System": "Sistema", "Media": "Media", "Weather": "Meteo", "Markets": "Mercati",
     "Hardware": "Hardware", "Agents": "Agenti", "Agenda": "Agenda", "Notifications": "Notifiche",
@@ -53,6 +58,16 @@ IT = {
     "Animation frames per second": "Fotogrammi al secondo delle animazioni",
     "Switch to the media page when a song starts": "Passa alla pagina media quando parte un brano",
     "Turn the screen off when the PC is locked": "Spegni lo schermo quando il PC è bloccato",
+    "Record…": "Registra…", "Press the keys…": "Premi i tasti…", "Default": "Predefinita", "Shortcut": "Scorciatoia",
+    "Record: press the button, then the key combination (Esc cancels).":
+        "Registra: premi il pulsante, poi la combinazione di tasti (Esc annulla).",
+    "This combination is already used by the other shortcut.": "Questa combinazione è già usata dall'altra scorciatoia.",
+    "A single key will also change page every time you use it for something else. Use it anyway?":
+        "Un tasto singolo cambierà pagina anche ogni volta che lo usi per altro. Usarlo comunque?",
+    "Hardware sensors: CPU temperatures and power need the free PawnIO driver used by LibreHardwareMonitor. Install it "
+    "from pawnio.eu, then restart the app.": "Sensori hardware: temperature e potenza della CPU richiedono il driver "
+    "gratuito PawnIO usato da LibreHardwareMonitor. Installalo da pawnio.eu e riavvia l'app.",
+    "max_agent_pages": "massimo pagine agente",
     "Next page shortcut": "Scorciatoia pagina successiva", "Previous page shortcut": "Scorciatoia pagina precedente",
     # --- data tab
     "Settings of the data sources used by the widgets.": "Impostazioni delle fonti di dati usate dai widget.",

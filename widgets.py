@@ -720,8 +720,12 @@ class Agents(Widget):
 
     @classmethod
     def draw(cls, img, d, box, w, state):
+        current = get(state, "agent.key")
+
         def one(b, s):
             x0, y0, x1, y1 = b
+            if s.get("key") == current:  # the session this page is about
+                d.rounded_rectangle(b, 8, outline=AGENT_COLORS.get(s["agent"], ui.ACCENT), width=2)
             d.rounded_rectangle((x0, y0, x0 + 5, y1), 2, fill=AGENT_COLORS.get(s["agent"], ui.ACCENT))
             two = y1 - y0 >= 38
             top = y0 + (y1 - y0) // 2 - (9 if two else 0)
@@ -732,11 +736,53 @@ class Agents(Widget):
             if two:
                 extra = s["model"]
                 if s.get("limit_pct") is not None:
-                    extra += f"  ·  limit {s['limit_pct']:.0f}%"
+                    extra += f"  ·  {_('limit')} {s['limit_pct']:.0f}%"
                 d.text((x0 + 28, top + 18), fit(d, extra, font(12), x1 - x0 - 40), font=font(12), fill=ui.MUTED, anchor="lm")
         agents = get(state, "agents")
-        rows(d, box, (agents if isinstance(agents, list) else [])[int(cls.p(w, "start")):], max(20, int(cls.p(w, "row"))),
-             one, empty="No agents running" if isinstance(agents, list) else "")
+        items = (agents if isinstance(agents, list) else [])[int(cls.p(w, "start")):]
+        items = sorted(items, key=lambda s: s.get("key") != current)  # this page's session always visible, on top
+        rows(d, box, items, max(20, int(cls.p(w, "row"))), one, empty="No agents running" if isinstance(agents, list) else "")
+
+
+# Pixel-art agent mascot: B = body, E = eye, . = empty. Two leg frames for walking.
+MASCOT = ["..##########..", "..##########..", "..###E##E###..", "..###E##E###..", "##############",
+          "##############", "..##########.."]
+LEGS = (["..#.#....#.#..", "..#.#....#.#.."], ["...#.#..#.#...", "...#.#..#.#..."])
+EYE = (24, 22, 20)
+
+
+@widget
+class Mascot(Widget):
+    """Little pixel creature in the agent's colour: walks while the agent works, blinks while it waits."""
+    type, label, size, needs, animated = "mascot", "Agent mascot", (112, 72), ("agents",), True
+    props = [("agent", "field", "agent.agent", "Agent (field)"), ("busy", "field", "agent.busy", "Working when (field)"),
+             ("color", "text", "auto", "Colour (auto = agent colour)")]
+
+    @classmethod
+    def draw(cls, img, d, box, w, state):
+        x0, y0, x1, y1 = box
+        agent = get(state, cls.p(w, "agent"))
+        busy = bool(get(state, cls.p(w, "busy")))
+        spec = str(cls.p(w, "color"))
+        body = AGENT_COLORS.get(agent, CLAUDE_ORANGE) if spec in ("", "auto") else color(spec)
+        t = now(state)
+        rows = MASCOT + LEGS[int(t * 4) % 2 if busy else 0]
+        if not busy and (t % 3.7) < 0.18:  # blink: eyes become a thin line
+            rows = [r.replace("E", "#") if i == 2 else r for i, r in enumerate(rows)]
+        cols = len(rows[0])
+        px = max(1, min((x1 - x0) // cols, (y1 - y0) // (len(rows) + 1)))
+        ox = x0 + ((x1 - x0) - cols * px) // 2
+        oy = y0 + ((y1 - y0) - len(rows) * px) // 2 + (-(px // 2) if busy and int(t * 4) % 2 else 0)  # bob while walking
+        for r, row in enumerate(rows):
+            for c, ch in enumerate(row):
+                if ch != ".":
+                    d.rectangle((ox + c * px, oy + r * px, ox + (c + 1) * px - 1, oy + (r + 1) * px - 1),
+                                fill=EYE if ch == "E" else body)
+        if busy:  # three dots appearing one after the other, like "thinking..."
+            for i in range(int(t * 2) % 4):
+                cx = ox + cols * px + px * (1 + i * 2)
+                if cx + px <= x1:
+                    d.ellipse((cx, oy + px, cx + px, oy + 2 * px), fill=body)
 
 
 @widget

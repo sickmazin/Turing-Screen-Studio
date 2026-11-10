@@ -16,7 +16,6 @@
     "hardware",
     "media",
     "claude",
-    "agents",
     "weather",
     "stocks",
     "agenda",
@@ -26,5 +25,6 @@
     "city": "Milano",
     "lat": 45.46,
     "lon": 9.19
-  }
+  },
+  "max_agent_pages": 4
 }

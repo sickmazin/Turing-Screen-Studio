@@ -50,12 +50,18 @@ class Transcripts(unittest.TestCase):
         p = write_jsonl([
             {"type": "session_meta", "payload": {"cwd": "C:\\PROJECT\\gnn"}},
             {"type": "turn_context", "payload": {"model": "gpt-x"}},
+            {"type": "event_msg", "payload": {"type": "task_started"}},
             {"type": "event_msg", "payload": {"type": "token_count", "info": {
-                "last_token_usage": {"input_tokens": 1000}, "model_context_window": 4000},
-                "rate_limits": {"primary": {"used_percent": 72.0}}}},
+                "last_token_usage": {"input_tokens": 1000}, "total_token_usage": {"output_tokens": 77},
+                "model_context_window": 4000},
+                "rate_limits": {"primary": {"used_percent": 72.0, "window_minutes": 43200}}}},
+            {"type": "event_msg", "payload": {"type": "task_complete"}},
+            {"type": "event_msg", "payload": {"type": "task_started"}},
         ])
         s = agents.parse_codex(p)
-        self.assertEqual((s["project"], s["model"], s["context"], s["window"], s["limit_pct"]), ("gnn", "gpt-x", 1000, 4000, 72.0))
+        self.assertEqual((s["project"], s["model"], s["context"], s["window"], s["output_tokens"]), ("gnn", "gpt-x", 1000, 4000, 77))
+        self.assertEqual(s["limits"], [{"label": "30 d", "pct": 72.0, "resets_at": None}])
+        self.assertEqual((s["turns"], s["working"]), (2, True))  # second task still running
 
     def test_gemini_reads_last_input_tokens(self):
         d = Path(tempfile.mkdtemp()) / "proj" / "chats"
