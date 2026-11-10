@@ -1,5 +1,5 @@
 {
- "name": "Sistema",
+ "name": "System",
  "portrait": [
   {
    "type": "text",
@@ -7,7 +7,7 @@
    "y": 4,
    "w": 288,
    "h": 24,
-   "text": "SISTEMA",
+   "text": "SYSTEM",
    "size": 15,
    "bold": true,
    "color": "muted",
@@ -25,7 +25,8 @@
    "bold": true,
    "color": "muted",
    "align": "left",
-   "fallback": ""
+   "fallback": "",
+   "group": "system-cpu"
   },
   {
    "type": "text",
@@ -38,7 +39,8 @@
    "bold": true,
    "color": "fg",
    "align": "right",
-   "fallback": ""
+   "fallback": "",
+   "group": "system-cpu"
   },
   {
    "type": "bar",
@@ -49,7 +51,8 @@
    "field": "system.cpu",
    "max": "100",
    "color": "level",
-   "bg": "card"
+   "bg": "card",
+   "group": "system-cpu"
   },
   {
    "type": "text",
@@ -62,7 +65,8 @@
    "bold": true,
    "color": "muted",
    "align": "left",
-   "fallback": ""
+   "fallback": "",
+   "group": "system-ram"
   },
   {
    "type": "text",
@@ -75,7 +79,8 @@
    "bold": true,
    "color": "fg",
    "align": "right",
-   "fallback": ""
+   "fallback": "",
+   "group": "system-ram"
   },
   {
    "type": "bar",
@@ -86,7 +91,8 @@
    "field": "system.ram",
    "max": "100",
    "color": "level",
-   "bg": "card"
+   "bg": "card",
+   "group": "system-ram"
   },
   {
    "type": "text",
@@ -99,7 +105,8 @@
    "bold": false,
    "color": "muted",
    "align": "left",
-   "fallback": ""
+   "fallback": "",
+   "group": "system-ram"
   },
   {
    "type": "text",
@@ -107,12 +114,13 @@
    "y": 210,
    "w": 120,
    "h": 20,
-   "text": "DISCO",
+   "text": "DISK",
    "size": 16,
    "bold": true,
    "color": "muted",
    "align": "left",
-   "fallback": ""
+   "fallback": "",
+   "group": "system-disk"
   },
   {
    "type": "text",
@@ -125,7 +133,8 @@
    "bold": true,
    "color": "fg",
    "align": "right",
-   "fallback": ""
+   "fallback": "",
+   "group": "system-disk"
   },
   {
    "type": "bar",
@@ -136,7 +145,8 @@
    "field": "system.disk",
    "max": "100",
    "color": "level",
-   "bg": "card"
+   "bg": "card",
+   "group": "system-disk"
   },
   {
    "type": "text",
@@ -144,7 +154,7 @@
    "y": 290,
    "w": 120,
    "h": 20,
-   "text": "CORE",
+   "text": "CORES",
    "size": 16,
    "bold": true,
    "color": "muted",
@@ -192,7 +202,7 @@
    "y": 446,
    "w": 288,
    "h": 20,
-   "text": "acceso da {system.uptime:hm}",
+   "text": "up for {system.uptime:hm}",
    "size": 14,
    "bold": false,
    "color": "muted",
@@ -207,7 +217,7 @@
    "y": 4,
    "w": 448,
    "h": 24,
-   "text": "SISTEMA",
+   "text": "SYSTEM",
    "size": 15,
    "bold": true,
    "color": "muted",
@@ -225,7 +235,8 @@
    "bold": true,
    "color": "muted",
    "align": "left",
-   "fallback": ""
+   "fallback": "",
+   "group": "system-cpu"
   },
   {
    "type": "text",
@@ -238,7 +249,8 @@
    "bold": true,
    "color": "fg",
    "align": "right",
-   "fallback": ""
+   "fallback": "",
+   "group": "system-cpu"
   },
   {
    "type": "bar",
@@ -249,7 +261,8 @@
    "field": "system.cpu",
    "max": "100",
    "color": "level",
-   "bg": "card"
+   "bg": "card",
+   "group": "system-cpu"
   },
   {
    "type": "text",
@@ -262,7 +275,8 @@
    "bold": true,
    "color": "muted",
    "align": "left",
-   "fallback": ""
+   "fallback": "",
+   "group": "system-ram"
   },
   {
    "type": "text",
@@ -275,7 +289,8 @@
    "bold": true,
    "color": "fg",
    "align": "right",
-   "fallback": ""
+   "fallback": "",
+   "group": "system-ram"
   },
   {
    "type": "bar",
@@ -286,7 +301,8 @@
    "field": "system.ram",
    "max": "100",
    "color": "level",
-   "bg": "card"
+   "bg": "card",
+   "group": "system-ram"
   },
   {
    "type": "text",
@@ -299,7 +315,8 @@
    "bold": false,
    "color": "muted",
    "align": "left",
-   "fallback": ""
+   "fallback": "",
+   "group": "system-ram"
   },
   {
    "type": "text",
@@ -307,12 +324,13 @@
    "y": 196,
    "w": 120,
    "h": 20,
-   "text": "DISCO",
+   "text": "DISK",
    "size": 16,
    "bold": true,
    "color": "muted",
    "align": "left",
-   "fallback": ""
+   "fallback": "",
+   "group": "system-disk"
   },
   {
    "type": "text",
@@ -325,7 +343,8 @@
    "bold": true,
    "color": "fg",
    "align": "right",
-   "fallback": ""
+   "fallback": "",
+   "group": "system-disk"
   },
   {
    "type": "bar",
@@ -336,7 +355,8 @@
    "field": "system.disk",
    "max": "100",
    "color": "level",
-   "bg": "card"
+   "bg": "card",
+   "group": "system-disk"
   },
   {
    "type": "text",
@@ -344,7 +364,7 @@
    "y": 36,
    "w": 120,
    "h": 20,
-   "text": "CORE",
+   "text": "CORES",
    "size": 16,
    "bold": true,
    "color": "muted",
@@ -392,7 +412,7 @@
    "y": 284,
    "w": 208,
    "h": 20,
-   "text": "acceso da {system.uptime:hm}",
+   "text": "up for {system.uptime:hm}",
    "size": 14,
    "bold": false,
    "color": "muted",

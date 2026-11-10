@@ -1,17 +1,17 @@
-"""Quotazioni dall'endpoint chart di Yahoo Finance.
+"""Quotes from the Yahoo Finance chart endpoint.
 
-shortcut: endpoint non ufficiale, può cambiare; se si rompe sostituire solo _get().
+shortcut: unofficial endpoint, it may change; if it breaks only _get() needs replacing.
 """
 import asyncio
 
 import requests
 
 name = "stocks"
-settings = {"tickers": ["AAPL", "NVDA", "MSFT", "BTC-USD", "^GSPC"]}  # valori predefiniti, modificabili da settings.py (scheda Dati)
+settings = {"tickers": ["AAPL", "NVDA", "MSFT", "BTC-USD", "^GSPC"]}  # defaults, editable in the Data tab
 interval = 60
 
 URL = "https://query1.finance.yahoo.com/v8/finance/chart/{}"
-HEADERS = {"User-Agent": "Mozilla/5.0"}  # senza User-Agent Yahoo risponde 429
+HEADERS = {"User-Agent": "Mozilla/5.0"}  # without a User-Agent Yahoo answers 429
 
 
 def _get(symbol):

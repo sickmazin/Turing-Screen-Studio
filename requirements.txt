@@ -5,3 +5,6 @@ winsdk
 requests
 keyboard
 pystray
+pythonnet
+icalendar
+recurring-ical-events

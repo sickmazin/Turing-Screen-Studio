@@ -1,4 +1,4 @@
-"""Brano in riproduzione da Windows (SMTC): Spotify, browser, ecc."""
+"""Song playing in Windows (System Media Transport Controls): Spotify, browsers, etc."""
 import io
 
 from PIL import Image
@@ -6,7 +6,7 @@ from winsdk.windows.media.control import GlobalSystemMediaTransportControlsSessi
 from winsdk.windows.storage.streams import DataReader
 
 name = "media"
-settings = {}  # valori predefiniti, modificabili da settings.py (scheda Dati)
+settings = {}  # defaults, editable in the Data tab
 interval = 1
 
 PLAYING = 4  # GlobalSystemMediaTransportControlsSessionPlaybackStatus.PLAYING

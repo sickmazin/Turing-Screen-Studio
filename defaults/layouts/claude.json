@@ -35,7 +35,7 @@
    "bold": true,
    "color": "fg",
    "align": "left",
-   "fallback": "Nessuna sessione attiva"
+   "fallback": "No active session"
   },
   {
    "type": "text",
@@ -60,7 +60,8 @@
    "max": "100",
    "thickness": 14,
    "color": "level",
-   "bg": "card"
+   "bg": "card",
+   "group": "context"
   },
   {
    "type": "text",
@@ -73,7 +74,8 @@
    "bold": true,
    "color": "fg",
    "align": "center",
-   "fallback": ""
+   "fallback": "",
+   "group": "context"
   },
   {
    "type": "text",
@@ -86,7 +88,8 @@
    "bold": false,
    "color": "muted",
    "align": "center",
-   "fallback": ""
+   "fallback": "",
+   "group": "context"
   },
   {
    "type": "text",
@@ -94,12 +97,13 @@
    "y": 238,
    "w": 144,
    "h": 18,
-   "text": "contesto",
+   "text": "context",
    "size": 13,
    "bold": false,
    "color": "muted",
    "align": "center",
-   "fallback": ""
+   "fallback": "",
+   "group": "context"
   },
   {
    "type": "text",
@@ -146,7 +150,7 @@
    "y": 288,
    "w": 96,
    "h": 16,
-   "text": "turni",
+   "text": "turns",
    "size": 12,
    "bold": false,
    "color": "muted",
@@ -172,7 +176,7 @@
    "y": 288,
    "w": 96,
    "h": 16,
-   "text": "costo{claude.0.cost:hide}",
+   "text": "cost{claude.0.cost:hide}",
    "size": 12,
    "bold": false,
    "color": "muted",
@@ -185,12 +189,13 @@
    "y": 312,
    "w": 178,
    "h": 20,
-   "text": "Limite 5 ore  {claude.0.rate_limits.five_hour.used_percentage:.0f}%",
+   "text": "Limit 5 h  {claude.0.rate_limits.five_hour.used_percentage:.0f}%",
    "size": 13,
    "bold": true,
    "color": "fg",
    "align": "left",
-   "fallback": ""
+   "fallback": "",
+   "group": "limit-five_hour"
   },
   {
    "type": "text",
@@ -203,7 +208,8 @@
    "bold": false,
    "color": "muted",
    "align": "right",
-   "fallback": ""
+   "fallback": "",
+   "group": "limit-five_hour"
   },
   {
    "type": "bar",
@@ -214,7 +220,8 @@
    "field": "claude.0.rate_limits.five_hour.used_percentage",
    "max": "100",
    "color": "level",
-   "bg": "card"
+   "bg": "card",
+   "group": "limit-five_hour"
   },
   {
    "type": "text",
@@ -222,12 +229,13 @@
    "y": 352,
    "w": 178,
    "h": 20,
-   "text": "Limite 7 giorni  {claude.0.rate_limits.seven_day.used_percentage:.0f}%",
+   "text": "Limit 7 days  {claude.0.rate_limits.seven_day.used_percentage:.0f}%",
    "size": 13,
    "bold": true,
    "color": "fg",
    "align": "left",
-   "fallback": ""
+   "fallback": "",
+   "group": "limit-seven_day"
   },
   {
    "type": "text",
@@ -240,7 +248,8 @@
    "bold": false,
    "color": "muted",
    "align": "right",
-   "fallback": ""
+   "fallback": "",
+   "group": "limit-seven_day"
   },
   {
    "type": "bar",
@@ -251,7 +260,8 @@
    "field": "claude.0.rate_limits.seven_day.used_percentage",
    "max": "100",
    "color": "level",
-   "bg": "card"
+   "bg": "card",
+   "group": "limit-seven_day"
   },
   {
    "type": "sessions",
@@ -298,7 +308,7 @@
    "bold": true,
    "color": "fg",
    "align": "left",
-   "fallback": "Nessuna sessione attiva"
+   "fallback": "No active session"
   },
   {
    "type": "text",
@@ -323,7 +333,8 @@
    "max": "100",
    "thickness": 14,
    "color": "level",
-   "bg": "card"
+   "bg": "card",
+   "group": "context"
   },
   {
    "type": "text",
@@ -336,7 +347,8 @@
    "bold": true,
    "color": "fg",
    "align": "center",
-   "fallback": ""
+   "fallback": "",
+   "group": "context"
   },
   {
    "type": "text",
@@ -349,7 +361,8 @@
    "bold": false,
    "color": "muted",
    "align": "center",
-   "fallback": ""
+   "fallback": "",
+   "group": "context"
   },
   {
    "type": "text",
@@ -357,12 +370,13 @@
    "y": 246,
    "w": 150,
    "h": 18,
-   "text": "contesto",
+   "text": "context",
    "size": 13,
    "bold": false,
    "color": "muted",
    "align": "center",
-   "fallback": ""
+   "fallback": "",
+   "group": "context"
   },
   {
    "type": "text",
@@ -409,7 +423,7 @@
    "y": 62,
    "w": 88,
    "h": 16,
-   "text": "turni",
+   "text": "turns",
    "size": 12,
    "bold": false,
    "color": "muted",
@@ -435,7 +449,7 @@
    "y": 62,
    "w": 88,
    "h": 16,
-   "text": "costo{claude.0.cost:hide}",
+   "text": "cost{claude.0.cost:hide}",
    "size": 12,
    "bold": false,
    "color": "muted",
@@ -448,12 +462,13 @@
    "y": 98,
    "w": 154,
    "h": 20,
-   "text": "Limite 5 ore  {claude.0.rate_limits.five_hour.used_percentage:.0f}%",
+   "text": "Limit 5 h  {claude.0.rate_limits.five_hour.used_percentage:.0f}%",
    "size": 13,
    "bold": true,
    "color": "fg",
    "align": "left",
-   "fallback": ""
+   "fallback": "",
+   "group": "limit-five_hour"
   },
   {
    "type": "text",
@@ -466,7 +481,8 @@
    "bold": false,
    "color": "muted",
    "align": "right",
-   "fallback": ""
+   "fallback": "",
+   "group": "limit-five_hour"
   },
   {
    "type": "bar",
@@ -477,7 +493,8 @@
    "field": "claude.0.rate_limits.five_hour.used_percentage",
    "max": "100",
    "color": "level",
-   "bg": "card"
+   "bg": "card",
+   "group": "limit-five_hour"
   },
   {
    "type": "text",
@@ -485,12 +502,13 @@
    "y": 138,
    "w": 154,
    "h": 20,
-   "text": "Limite 7 giorni  {claude.0.rate_limits.seven_day.used_percentage:.0f}%",
+   "text": "Limit 7 days  {claude.0.rate_limits.seven_day.used_percentage:.0f}%",
    "size": 13,
    "bold": true,
    "color": "fg",
    "align": "left",
-   "fallback": ""
+   "fallback": "",
+   "group": "limit-seven_day"
   },
   {
    "type": "text",
@@ -503,7 +521,8 @@
    "bold": false,
    "color": "muted",
    "align": "right",
-   "fallback": ""
+   "fallback": "",
+   "group": "limit-seven_day"
   },
   {
    "type": "bar",
@@ -514,7 +533,8 @@
    "field": "claude.0.rate_limits.seven_day.used_percentage",
    "max": "100",
    "color": "level",
-   "bg": "card"
+   "bg": "card",
+   "group": "limit-seven_day"
   },
   {
    "type": "sessions",

@@ -1,0 +1,49 @@
+{
+ "name": "Notifications",
+ "portrait": [
+  {
+   "type": "text",
+   "x": 16,
+   "y": 4,
+   "w": 288,
+   "h": 24,
+   "text": "NOTIFICATIONS",
+   "size": 15,
+   "bold": true,
+   "color": "muted",
+   "align": "left",
+   "fallback": ""
+  },
+  {
+   "type": "notifications",
+   "x": 12,
+   "y": 40,
+   "w": 296,
+   "h": 432,
+   "row": 62
+  }
+ ],
+ "landscape": [
+  {
+   "type": "text",
+   "x": 16,
+   "y": 4,
+   "w": 448,
+   "h": 24,
+   "text": "NOTIFICATIONS",
+   "size": 15,
+   "bold": true,
+   "color": "muted",
+   "align": "left",
+   "fallback": ""
+  },
+  {
+   "type": "notifications",
+   "x": 12,
+   "y": 36,
+   "w": 456,
+   "h": 276,
+   "row": 56
+  }
+ ]
+}

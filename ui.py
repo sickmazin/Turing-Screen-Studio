@@ -1,8 +1,8 @@
-"""Tema attivo e helper grafici condivisi dalle pagine.
+"""Active theme and drawing helpers shared by pages and widgets.
 
-Le pagine leggono i colori come ui.BG, ui.FG, ... al momento del render, così un cambio di tema vale subito.
-Un tema è una cartella themes/<id>/ con theme.json + eventuali immagini e font; si condivide come
-file .schermetto-theme (uno zip della cartella).
+Pages read colours as ui.BG, ui.FG, ... at render time, so a theme change applies immediately.
+A theme is a folder themes/<id>/ holding theme.json plus optional images and fonts; it is shared as a
+.tss-theme file (a flat zip of that folder).
 """
 import copy
 import json
@@ -12,20 +12,22 @@ from pathlib import Path
 
 from PIL import Image, ImageColor, ImageDraw, ImageFont, ImageOps
 
-THEMES = Path(__file__).parent / "themes"
-THEME_EXT = ".schermetto-theme"
+import paths
+
+THEME_EXT = ".tss-theme"
 COLOR_KEYS = ["bg", "card", "fg", "muted", "accent", "good", "warn", "bad"]
 DEFAULT_THEME = {
-    "name": "Scuro",
+    "name": "Dark",
     "colors": {"bg": "#0c0e14", "card": "#1c202c", "fg": "#ebeef5", "muted": "#8c94a5",
                "accent": "#6eaaff", "good": "#50d282", "warn": "#fabe46", "bad": "#f05a5a"},
     "font": {"regular": "segoeui.ttf", "bold": "segoeuib.ttf", "scale": 1.0},
-    "backgrounds": {},        # pagina -> file immagine nella cartella del tema
-    "background_dim": 0.55,   # quanto scurire lo sfondo (0 = immagine piena, 1 = solo colore)
+    "backgrounds": {},        # page id -> image file inside the theme folder
+    "background_dim": 0.55,   # how much to darken backgrounds (0 = full image, 1 = plain colour)
 }
+MAX_IMPORT = 50 * 2**20
 
 BG = CARD = FG = MUTED = ACCENT = GOOD = WARN = BAD = None
-theme, theme_dir = DEFAULT_THEME, THEMES
+theme, theme_dir = DEFAULT_THEME, paths.THEMES
 
 
 def merge_defaults(t: dict) -> dict:
@@ -50,9 +52,9 @@ def apply_theme(t: dict, folder: Path):
 
 
 def list_themes() -> dict:
-    """id cartella -> nome visualizzato."""
+    """Theme folder id -> display name."""
     out = {}
-    for f in sorted(THEMES.glob("*/theme.json")):
+    for f in sorted(paths.THEMES.glob("*/theme.json")):
         try:
             out[f.parent.name] = json.loads(f.read_text(encoding="utf-8")).get("name", f.parent.name)
         except ValueError:
@@ -61,11 +63,11 @@ def list_themes() -> dict:
 
 
 def read_theme(theme_id: str) -> dict:
-    return merge_defaults(json.loads((THEMES / theme_id / "theme.json").read_text(encoding="utf-8")))
+    return merge_defaults(json.loads((paths.THEMES / theme_id / "theme.json").read_text(encoding="utf-8")))
 
 
 def save_theme(theme_id: str, t: dict):
-    folder = THEMES / theme_id
+    folder = paths.THEMES / theme_id
     folder.mkdir(parents=True, exist_ok=True)
     tmp = folder / "theme.json.tmp"
     tmp.write_text(json.dumps(t, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -74,45 +76,53 @@ def save_theme(theme_id: str, t: dict):
 
 def load_theme(theme_id: str):
     try:
-        apply_theme(read_theme(theme_id), THEMES / theme_id)
+        apply_theme(read_theme(theme_id), paths.THEMES / theme_id)
     except (OSError, ValueError):
-        apply_theme(DEFAULT_THEME, THEMES)
+        apply_theme(DEFAULT_THEME, paths.THEMES)
 
 
 def export_theme(theme_id: str, dest: Path):
     with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as z:
-        for f in (THEMES / theme_id).iterdir():
+        for f in (paths.THEMES / theme_id).iterdir():
             if f.is_file():
                 z.write(f, f.name)
 
 
+def unique_dir(parent: Path, base: str) -> Path:
+    base = "".join(c for c in base if c.isalnum() or c in "-_ ").strip() or "item"
+    folder, n = parent / base, 2
+    while folder.exists():
+        folder, n = parent / f"{base} {n}", n + 1
+    return folder
+
+
+def safe_extract(z: zipfile.ZipFile, dest: Path, skip=()):
+    """Extract a zip that came from someone else: flat files only, no paths, limited size."""
+    files = [i for i in z.infolist() if not i.is_dir()]
+    if sum(i.file_size for i in files) > MAX_IMPORT:
+        raise ValueError("file too large (max 50 MB)")
+    dest.mkdir(parents=True, exist_ok=True)
+    for i in files:
+        name = Path(i.filename).name  # drops any folder or ".." in the name
+        if name and not name.startswith(".") and name not in skip:
+            (dest / name).write_bytes(z.read(i))
+
+
 def import_theme(src: Path) -> str:
-    """Importa un .schermetto-theme. Il file arriva da altri: solo file piatti, niente percorsi, dimensione limitata."""
     with zipfile.ZipFile(src) as z:
-        names = [i for i in z.infolist() if not i.is_dir()]
-        if "theme.json" not in [i.filename for i in names]:
-            raise ValueError("theme.json mancante")
-        if sum(i.file_size for i in names) > 50 * 2**20:
-            raise ValueError("tema troppo grande (max 50 MB)")
+        if "theme.json" not in z.namelist():
+            raise ValueError("theme.json missing")
         t = json.loads(z.read("theme.json"))
         if not isinstance(t, dict):
-            raise ValueError("theme.json non valido")
-        base = "".join(c for c in Path(src).stem if c.isalnum() or c in "-_ ").strip() or "tema"
-        theme_id, n = base, 2
-        while (THEMES / theme_id).exists():
-            theme_id, n = f"{base} {n}", n + 1
-        folder = THEMES / theme_id
-        folder.mkdir(parents=True)
-        for i in names:
-            name = Path(i.filename).name  # scarta qualsiasi cartella/.. nel nome
-            if name and not name.startswith("."):
-                (folder / name).write_bytes(z.read(i))
-    return theme_id
+            raise ValueError("invalid theme.json")
+        folder = unique_dir(paths.THEMES, Path(src).stem)
+        safe_extract(z, folder)
+    return folder.name
 
 
 def _font_path(name: str):
     local = theme_dir / name
-    return str(local) if local.is_file() else name  # file nel tema, altrimenti font di sistema
+    return str(local) if local.is_file() else name  # file in the theme, otherwise a system font
 
 
 @lru_cache(maxsize=None)
@@ -125,6 +135,27 @@ def font(size: int, bold=False):
         except OSError:
             continue
     return ImageFont.load_default(px)
+
+
+@lru_cache(maxsize=None)
+def emoji(size: int):
+    """Windows colour emoji font: use with d.text(..., embedded_color=True)."""
+    return ImageFont.truetype("seguiemj.ttf", size)
+
+
+@lru_cache(maxsize=256)
+def emoji_tile(char: str, size: int):
+    """Emoji rendered once and cropped to its pixels (Pillow's anchor is wrong for colour glyphs)."""
+    tile = Image.new("RGBA", (size * 2, size * 2), (0, 0, 0, 0))
+    ImageDraw.Draw(tile).text((size // 2, size // 2), char, font=emoji(size), embedded_color=True)
+    box = tile.getbbox()
+    return tile.crop(box) if box else None
+
+
+def paste_emoji(img, center, char: str, size: int):
+    tile = emoji_tile(char, max(4, int(size)))
+    if tile:
+        img.paste(tile, (int(center[0]) - tile.width // 2, int(center[1]) - tile.height // 2), tile)
 
 
 @lru_cache(maxsize=32)
@@ -141,27 +172,8 @@ def _background(size, page: str):
 
 
 def canvas(size, page: str) -> Image.Image:
-    """Immagine di partenza di una pagina: colore di sfondo o immagine del tema."""
+    """Starting image of a page: theme background colour or image."""
     return _background(tuple(size), page).copy()
-
-
-apply_theme(DEFAULT_THEME, THEMES)
-
-
-@lru_cache(maxsize=None)
-def emoji(size: int):
-    """Font emoji a colori di Windows: usare con d.text(..., embedded_color=True)."""
-    return ImageFont.truetype("seguiemj.ttf", size)
-
-
-def paste_emoji(img, center, char: str, size: int):
-    """Disegna un'emoji centrata: l'anchor di Pillow sbaglia con i glifi a colori, quindi ritaglio e incollo."""
-    tile = Image.new("RGBA", (size * 2, size * 2), (0, 0, 0, 0))
-    ImageDraw.Draw(tile).text((size // 2, size // 2), char, font=emoji(size), embedded_color=True)
-    box = tile.getbbox()
-    if box:
-        tile = tile.crop(box)
-        img.paste(tile, (center[0] - tile.width // 2, center[1] - tile.height // 2), tile)
 
 
 def level_color(pct: float):
@@ -178,7 +190,7 @@ def bar(d: ImageDraw.ImageDraw, xy, pct: float, color=None, bg=None):
 
 
 def fit(d: ImageDraw.ImageDraw, text: str, f, max_w: int) -> str:
-    """Tronca il testo con … per stare in max_w pixel."""
+    """Truncate text with an ellipsis so it fits in max_w pixels."""
     text = str(text)
     if d.textlength(text, font=f) <= max_w:
         return text
@@ -187,15 +199,12 @@ def fit(d: ImageDraw.ImageDraw, text: str, f, max_w: int) -> str:
     return text + "…"
 
 
-def header(d: ImageDraw.ImageDraw, size, title: str, right: str = ""):
-    d.text((16, 12), title, font=font(15, True), fill=MUTED)
-    if right:
-        d.text((size[0] - 16, 12), right, font=font(15), fill=MUTED, anchor="ra")
-
-
 def human(n: float) -> str:
     for unit in ("", "k", "M", "B"):
         if abs(n) < 1000:
             return f"{n:.0f}{unit}" if unit == "" or n >= 100 else f"{n:.1f}{unit}"
         n /= 1000
     return f"{n:.1f}T"
+
+
+apply_theme(DEFAULT_THEME, paths.THEMES)

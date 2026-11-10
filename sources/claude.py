@@ -1,25 +1,26 @@
-"""Sessioni Claude Code attive, lette dai transcript in ~/.claude/projects.
+"""Active Claude Code sessions, read from the transcripts in ~/.claude/projects.
 
-Se è configurata claude_statusline.py, aggiunge anche costo, dimensione del contesto e limiti del piano
-dal JSON che Claude Code passa alla statusline (~/.schermetto/claude/<session>.json).
+If claude_statusline.py is configured as Claude Code's status line, cost, real context window size and plan
+limits are added from the JSON Claude Code passes to it (saved in <data>/claude/<session>.json).
 """
 import asyncio
 import json
 import time
 from pathlib import Path
 
+import paths
+
 name = "claude"
-settings = {"active_minutes": 30, "context_window": 200000}  # valori predefiniti, modificabili da settings.py (scheda Dati)
+settings = {"active_minutes": 30, "context_window": 200000}  # defaults, editable in the Data tab
 interval = 3
 
 PROJECTS = Path.home() / ".claude" / "projects"
-DUMPS = Path.home() / ".schermetto" / "claude"
-_cache = {}  # path -> (mtime, risultato): rileggo un transcript solo se è cambiato
+_cache = {}  # path -> (mtime, result): a transcript is parsed again only when it changes
 
 
 def parse_transcript(path: Path) -> dict:
     s = {"session_id": path.stem, "project": path.parent.name, "model": "", "context": 0,
-         "output_tokens": 0, "turns": 0, "last_role": "", "cwd": "", "started": None}
+         "output_tokens": 0, "turns": 0, "cwd": "", "started": None}
     seen = set()
     with path.open(encoding="utf-8", errors="replace") as f:
         for line in f:
@@ -28,14 +29,12 @@ def parse_transcript(path: Path) -> dict:
             except ValueError:
                 continue
             if e.get("isSidechain"):
-                continue  # i subagent hanno il loro contesto
+                continue  # subagents have their own context
             s["started"] = s["started"] or e.get("timestamp")
-            s["cwd"] = s["cwd"] or e.get("cwd", "")  # cartella dove è partita la sessione
+            s["cwd"] = s["cwd"] or e.get("cwd", "")  # folder where the session started
             t = e.get("type")
             if t == "user" and isinstance(e.get("message", {}).get("content"), str):
                 s["turns"] += 1
-            if t in ("user", "assistant"):
-                s["last_role"] = t
             if t != "assistant":
                 continue
             m = e.get("message", {})
@@ -43,10 +42,10 @@ def parse_transcript(path: Path) -> dict:
             if not u:
                 continue
             s["model"] = m.get("model", s["model"])
-            # contesto = tutto l'input dell'ultima richiesta (anche la parte in cache)
+            # context = all the input of the latest request, cached part included
             s["context"] = (u.get("input_tokens", 0) + u.get("cache_read_input_tokens", 0)
                             + u.get("cache_creation_input_tokens", 0))
-            if m.get("id") not in seen:  # un messaggio può comparire su più righe con lo stesso usage
+            if m.get("id") not in seen:  # one message can span several lines with the same usage
                 seen.add(m.get("id"))
                 s["output_tokens"] += u.get("output_tokens", 0)
     if s["cwd"]:
@@ -54,9 +53,9 @@ def parse_transcript(path: Path) -> dict:
     return s
 
 
-def _merge_statusline(s: dict, window_default: int):
+def merge_statusline(s: dict, window_default: int):
     s["window"] = window_default
-    dump = DUMPS / f"{s['session_id']}.json"
+    dump = paths.CLAUDE_DUMPS / f"{s['session_id']}.json"
     if not dump.exists():
         return
     try:
@@ -74,7 +73,7 @@ def _merge_statusline(s: dict, window_default: int):
     s["rate_limits"] = d.get("rate_limits")
 
 
-def _collect(cfg):
+def collect(cfg):
     now = time.time()
     active = cfg.get("active_minutes", 30) * 60
     out = []
@@ -89,21 +88,15 @@ def _collect(cfg):
         if not s["model"]:
             continue
         window = cfg.get("context_window", 200_000)
-        # senza statusline la finestra è una stima: se il contesto la supera, il modello ha quella da 1M
-        _merge_statusline(s, window if s["context"] <= window else 1_000_000)
+        # without the status line the window is a guess: if the context is bigger, the model has the 1M one
+        merge_statusline(s, window if s["context"] <= window else 1_000_000)
         s.setdefault("context_pct", s["context"] / s["window"] * 100)
         s["model_name"] = s.get("model_name") or s["model"]
-        # sta lavorando se il transcript è stato scritto da poco e l'ultimo turno non è chiuso
-        s["busy"] = s["age"] < 20
+        s["busy"] = s["age"] < 20  # written to in the last seconds = working
         out.append(s)
     out.sort(key=lambda s: s["age"])
     return out
 
 
 async def fetch(cfg):
-    return await asyncio.to_thread(_collect, cfg)
-
-
-if __name__ == "__main__":
-    for s in _collect({}):
-        print({k: v for k, v in s.items()})
+    return await asyncio.to_thread(collect, cfg)

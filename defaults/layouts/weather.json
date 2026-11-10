@@ -1,5 +1,5 @@
 {
- "name": "Meteo",
+ "name": "Weather",
  "portrait": [
   {
    "type": "text",
@@ -7,7 +7,7 @@
    "y": 4,
    "w": 288,
    "h": 24,
-   "text": "METEO",
+   "text": "WEATHER",
    "size": 15,
    "bold": true,
    "color": "muted",
@@ -28,12 +28,13 @@
    "fallback": ""
   },
   {
-   "type": "weather_icon",
-   "x": 110,
-   "y": 46,
-   "w": 100,
-   "h": 100,
-   "field": "weather.code"
+   "type": "weather_anim",
+   "x": 56,
+   "y": 34,
+   "w": 208,
+   "h": 116,
+   "field": "weather.code",
+   "intensity": 22
   },
   {
    "type": "text",
@@ -46,7 +47,7 @@
    "bold": true,
    "color": "fg",
    "align": "center",
-   "fallback": "In attesa dei dati…"
+   "fallback": "Waiting for data…"
   },
   {
    "type": "text",
@@ -54,7 +55,7 @@
    "y": 222,
    "w": 320,
    "h": 30,
-   "text": "{weather.code:meteo}",
+   "text": "{weather.code:weather}",
    "size": 20,
    "bold": false,
    "color": "accent",
@@ -67,7 +68,7 @@
    "y": 256,
    "w": 320,
    "h": 20,
-   "text": "percepita {weather.feels:.0f}° · umidità {weather.humidity}% · vento {weather.wind:.0f} km/h",
+   "text": "feels {weather.feels:.0f}° · humidity {weather.humidity}% · wind {weather.wind:.0f} km/h",
    "size": 12,
    "bold": false,
    "color": "muted",
@@ -118,7 +119,7 @@
    "y": 4,
    "w": 448,
    "h": 24,
-   "text": "METEO",
+   "text": "WEATHER",
    "size": 15,
    "bold": true,
    "color": "muted",
@@ -127,9 +128,9 @@
   },
   {
    "type": "text",
-   "x": 300,
+   "x": 240,
    "y": 4,
-   "w": 164,
+   "w": 224,
    "h": 24,
    "text": "{weather.city}",
    "size": 15,
@@ -139,16 +140,17 @@
    "fallback": ""
   },
   {
-   "type": "weather_icon",
-   "x": 24,
-   "y": 38,
-   "w": 96,
-   "h": 96,
-   "field": "weather.code"
+   "type": "weather_anim",
+   "x": 16,
+   "y": 30,
+   "w": 150,
+   "h": 110,
+   "field": "weather.code",
+   "intensity": 20
   },
   {
    "type": "text",
-   "x": 136,
+   "x": 180,
    "y": 36,
    "w": 200,
    "h": 76,
@@ -157,15 +159,15 @@
    "bold": true,
    "color": "fg",
    "align": "left",
-   "fallback": "In attesa dei dati…"
+   "fallback": "Waiting for data…"
   },
   {
    "type": "text",
-   "x": 136,
+   "x": 180,
    "y": 106,
    "w": 220,
    "h": 28,
-   "text": "{weather.code:meteo}",
+   "text": "{weather.code:weather}",
    "size": 19,
    "bold": false,
    "color": "accent",
@@ -175,10 +177,10 @@
   {
    "type": "text",
    "x": 24,
-   "y": 140,
+   "y": 144,
    "w": 432,
    "h": 18,
-   "text": "percepita {weather.feels:.0f}° · umidità {weather.humidity}% · vento {weather.wind:.0f} km/h",
+   "text": "feels {weather.feels:.0f}° · humidity {weather.humidity}% · wind {weather.wind:.0f} km/h",
    "size": 12,
    "bold": false,
    "color": "muted",

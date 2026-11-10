@@ -1,0 +1,51 @@
+{
+ "name": "Agents",
+ "portrait": [
+  {
+   "type": "text",
+   "x": 16,
+   "y": 4,
+   "w": 288,
+   "h": 24,
+   "text": "AGENTS",
+   "size": 15,
+   "bold": true,
+   "color": "muted",
+   "align": "left",
+   "fallback": ""
+  },
+  {
+   "type": "agents",
+   "x": 12,
+   "y": 40,
+   "w": 296,
+   "h": 432,
+   "start": 0,
+   "row": 52
+  }
+ ],
+ "landscape": [
+  {
+   "type": "text",
+   "x": 16,
+   "y": 4,
+   "w": 448,
+   "h": 24,
+   "text": "AGENTS",
+   "size": 15,
+   "bold": true,
+   "color": "muted",
+   "align": "left",
+   "fallback": ""
+  },
+  {
+   "type": "agents",
+   "x": 12,
+   "y": 36,
+   "w": 456,
+   "h": 276,
+   "start": 0,
+   "row": 46
+  }
+ ]
+}

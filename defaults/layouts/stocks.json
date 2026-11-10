@@ -1,5 +1,5 @@
 {
- "name": "Mercati",
+ "name": "Markets",
  "portrait": [
   {
    "type": "text",
@@ -7,7 +7,7 @@
    "y": 4,
    "w": 288,
    "h": 24,
-   "text": "MERCATI",
+   "text": "MARKETS",
    "size": 15,
    "bold": true,
    "color": "muted",
@@ -67,7 +67,7 @@
    "y": 4,
    "w": 448,
    "h": 24,
-   "text": "MERCATI",
+   "text": "MARKETS",
    "size": 15,
    "bold": true,
    "color": "muted",

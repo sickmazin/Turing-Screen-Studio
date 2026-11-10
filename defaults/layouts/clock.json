@@ -1,5 +1,5 @@
 {
- "name": "Orologio",
+ "name": "Clock",
  "portrait": [
   {
    "type": "text",
@@ -45,7 +45,7 @@
   {
    "type": "text",
    "x": 0,
-   "y": 16,
+   "y": 60,
    "w": 480,
    "h": 140,
    "text": "{now:%H:%M}",
@@ -58,7 +58,7 @@
   {
    "type": "text",
    "x": 0,
-   "y": 144,
+   "y": 196,
    "w": 480,
    "h": 36,
    "text": "{now:%S}",

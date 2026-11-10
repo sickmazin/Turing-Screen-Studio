@@ -3,7 +3,7 @@ import time
 import psutil
 
 name = "system"
-settings = {"disk": "C:\\"}  # valori predefiniti, modificabili da settings.py (scheda Dati)
+settings = {"disk": "C:\\"}  # defaults, editable in the Data tab
 interval = 1
 
 _last_net = None

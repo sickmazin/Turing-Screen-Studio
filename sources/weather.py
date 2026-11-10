@@ -1,10 +1,10 @@
-"""Meteo da Open-Meteo (gratuito, senza chiave API)."""
+"""Weather from Open-Meteo (free, no API key)."""
 import asyncio
 
 import requests
 
 name = "weather"
-settings = {"city": "Milano", "lat": 45.46, "lon": 9.19}  # valori predefiniti, modificabili da settings.py (scheda Dati)
+settings = {"city": "Milano", "lat": 45.46, "lon": 9.19}  # defaults, editable in the Data tab
 interval = 600
 
 URL = "https://api.open-meteo.com/v1/forecast"

@@ -19,17 +19,18 @@
    "radius": 20
   },
   {
-   "type": "text",
+   "type": "marquee",
    "x": 16,
    "y": 306,
    "w": 288,
-   "h": 38,
+   "h": 40,
    "text": "{media.title}",
    "size": 26,
    "bold": true,
    "color": "fg",
+   "speed": 40,
    "align": "center",
-   "fallback": "Niente in riproduzione"
+   "fallback": "Nothing playing"
   },
   {
    "type": "text",
@@ -66,7 +67,8 @@
    "field": "media.position",
    "max": "media.duration",
    "color": "fg",
-   "bg": "muted"
+   "bg": "muted",
+   "group": "progress"
   },
   {
    "type": "text",
@@ -79,7 +81,8 @@
    "bold": false,
    "color": "muted",
    "align": "left",
-   "fallback": ""
+   "fallback": "",
+   "group": "progress"
   },
   {
    "type": "text",
@@ -92,7 +95,8 @@
    "bold": false,
    "color": "muted",
    "align": "right",
-   "fallback": ""
+   "fallback": "",
+   "group": "progress"
   },
   {
    "type": "play",
@@ -100,7 +104,8 @@
    "y": 448,
    "w": 10,
    "h": 10,
-   "color": "muted"
+   "color": "muted",
+   "group": "progress"
   }
  ],
  "landscape": [
@@ -122,17 +127,18 @@
    "radius": 20
   },
   {
-   "type": "text",
+   "type": "marquee",
    "x": 320,
    "y": 96,
    "w": 148,
-   "h": 40,
+   "h": 38,
    "text": "{media.title}",
    "size": 24,
    "bold": true,
    "color": "fg",
+   "speed": 40,
    "align": "left",
-   "fallback": "Niente in riproduzione"
+   "fallback": "Nothing playing"
   },
   {
    "type": "text",
@@ -169,7 +175,8 @@
    "field": "media.position",
    "max": "media.duration",
    "color": "fg",
-   "bg": "muted"
+   "bg": "muted",
+   "group": "progress"
   },
   {
    "type": "text",
@@ -182,7 +189,8 @@
    "bold": false,
    "color": "muted",
    "align": "left",
-   "fallback": ""
+   "fallback": "",
+   "group": "progress"
   },
   {
    "type": "text",
@@ -195,7 +203,8 @@
    "bold": false,
    "color": "muted",
    "align": "right",
-   "fallback": ""
+   "fallback": "",
+   "group": "progress"
   },
   {
    "type": "play",
@@ -203,7 +212,8 @@
    "y": 286,
    "w": 10,
    "h": 10,
-   "color": "muted"
+   "color": "muted",
+   "group": "progress"
   }
  ]
 }

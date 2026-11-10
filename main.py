@@ -1,7 +1,7 @@
-"""Schermetto: mostra pagine sul Turing Smart Screen 3.5".
+"""Turing Screen Studio: shows pages on the Turing Smart Screen 3.5".
 
-Avvio con finestra: .venv\\Scripts\\python main.py   ·   senza finestra: .venv\\Scripts\\pythonw main.py
-Le modifiche a config.json e al tema attivo vengono applicate dal vivo.
+Run with a console: python main.py   ·   without one: pythonw main.py   ·   frozen: TuringScreenStudio.exe
+Changes to config.json, to the active theme and to layouts are applied live.
 """
 import asyncio
 import ctypes
@@ -13,41 +13,47 @@ import pkgutil
 import sys
 import time
 from logging.handlers import RotatingFileHandler
-from pathlib import Path
 
 import keyboard
 import serial
 from PIL import Image, ImageChops, ImageDraw
 
+import i18n
 import layout
 import pages
+import paths
 import service
 import sources
 import ui
 from screen import Screen
 
-ROOT = Path(__file__).parent
-CONFIG = ROOT / "config.json"
-log = logging.getLogger("schermetto")
+log = logging.getLogger("studio")
+USB_ALERT_AFTER = 30  # seconds without the screen before the tray shows a notification
 
 
 def load(pkg) -> dict:
-    """Importa ogni file del package: aggiungere una pagina = aggiungere un file."""
+    """Import every module of a package: adding a page or source = adding a file."""
     mods = (importlib.import_module(f"{pkg.__name__}.{m.name}") for m in pkgutil.iter_modules(pkg.__path__))
     return {m.name: m for m in mods}
 
 
 def load_pages() -> dict:
-    """Pagine in codice (pages/*.py) + pagine a layout (layouts/*.json)."""
+    """Code pages (pages/*.py) + layout pages (layouts/*.json)."""
     return {**load(pages), **layout.load_layouts()}
 
 
 def load_config() -> dict:
-    return json.loads(CONFIG.read_text(encoding="utf-8"))
+    return json.loads(paths.CONFIG.read_text(encoding="utf-8"))
+
+
+def save_config(cfg: dict):
+    tmp = paths.CONFIG.with_suffix(".tmp")
+    tmp.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
+    tmp.replace(paths.CONFIG)  # atomic: readers never see a half-written file
 
 
 def is_locked() -> bool:
-    """True se Windows è sul blocco schermo: SwitchDesktop fallisce quando il desktop di input non è il nostro."""
+    """True when Windows shows the lock screen: SwitchDesktop fails if the input desktop is not ours."""
     user32 = ctypes.windll.user32
     h = user32.OpenInputDesktop(0, False, 0x0100)  # DESKTOP_SWITCHDESKTOP
     if not h:
@@ -58,7 +64,7 @@ def is_locked() -> bool:
         user32.CloseDesktop(h)
 
 
-def _mtime(p: Path):
+def _mtime(p):
     try:
         return p.stat().st_mtime
     except OSError:
@@ -81,18 +87,23 @@ class App:
         self.running = True
         self.stamp = None
         self.prev = None
+        self.hotkeys = []
+        self.history = layout.HistoryRecorder()
+        self.history_view = {}
+        self.missing_since = None
+        self.alerted = False
+        self.icon = None
         self.wake = asyncio.Event()
         self.loop = None
 
-    # --- configurazione -------------------------------------------------
+    # --- configuration --------------------------------------------------
     def section(self, name: str) -> dict:
-        """Impostazioni di una pagina/source: predefiniti della pagina + config.json."""
+        """Settings of a source or page: module defaults + config.json."""
         mod = self.all_sources.get(name) or self.all_pages.get(name)
-        defaults = getattr(mod, "settings", {})
-        return {**defaults, **self.cfg.get(name, {})}
+        return {**getattr(mod, "settings", {}), **self.cfg.get(name, {})}
 
     def _stamp(self):
-        return (_mtime(CONFIG), _mtime(ui.THEMES / self.cfg.get("theme", "scuro") / "theme.json"), layout.stamp())
+        return (_mtime(paths.CONFIG), _mtime(paths.THEMES / self.cfg.get("theme", "dark") / "theme.json"), layout.stamp())
 
     def check_reload(self):
         stamp = self._stamp()
@@ -101,23 +112,25 @@ class App:
         try:
             cfg = load_config()
         except (OSError, ValueError) as e:
-            log.warning("config.json non leggibile, tengo la precedente: %s", e)
+            log.warning("config.json unreadable, keeping the previous one: %s", e)
             self.stamp = stamp
             return
         self.apply(cfg)
         self.stamp = self._stamp()
-        log.info("configurazione applicata")
+        log.info("configuration applied")
 
     def apply(self, cfg: dict):
         self.cfg = cfg
-        ui.load_theme(cfg.get("theme", "scuro"))
+        i18n.set_language(cfg.get("language", "it"))
+        ui.load_theme(cfg.get("theme", "dark"))
         self.all_pages = load_pages()
-        names = cfg.get("pages") or ["clock"]
+        names = cfg.get("pages") or []
         unknown = [n for n in names if n not in self.all_pages]
         if unknown:
-            log.warning("pagine sconosciute ignorate: %s", unknown)
+            log.warning("unknown pages ignored: %s", unknown)
+        current = self.pages[self.idx].name if self.pages else None
         self.pages = [self.all_pages[n] for n in names if n in self.all_pages] or list(self.all_pages.values())[:1]
-        self.idx = min(self.idx, len(self.pages) - 1)
+        self.idx = next((i for i, p in enumerate(self.pages) if p.name == current), min(self.idx, len(self.pages) - 1))
 
         needed = {n for p in self.pages for n in p.needs if n in self.all_sources}
         for n in set(self.tasks) - needed:
@@ -129,7 +142,7 @@ class App:
         port, orient, bright = cfg.get("port", "AUTO"), cfg.get("orientation", "portrait"), cfg.get("brightness", 40)
         if (port, orient) != (s.port, s.orientation):
             s.port, s.orientation, s.brightness = port, orient, bright
-            s.close()  # si riapre al prossimo giro con i nuovi parametri
+            s.close()  # reopened on the next tick with the new parameters
         elif bright != s.brightness:
             s.brightness = bright
             if s.ser and not self.screen_off:
@@ -139,29 +152,45 @@ class App:
                     s.close()
         self.prev = None
 
-        for h in getattr(self, "hotkeys", []):  # unhook_all_hotkeys() di keyboard crasha se non ce ne sono
+        for h in self.hotkeys:  # keyboard.unhook_all_hotkeys() crashes when none are registered
             keyboard.remove_hotkey(h)
         self.hotkeys = []
         for key, default, step in (("key_next", "ctrl+shift+right", 1), ("key_prev", "ctrl+shift+left", -1)):
             try:
                 self.hotkeys.append(keyboard.add_hotkey(cfg.get(key, default), self.go, args=(step,)))
             except ValueError as e:
-                log.warning("scorciatoia non valida %s: %s", key, e)
+                log.warning("invalid hotkey %s: %s", key, e)
+        if self.icon:
+            self.icon.menu = tray_menu(self)
 
-    # --- navigazione ----------------------------------------------------
+    # --- navigation (callable from other threads: keyboard, tray) -------
+    def call(self, fn):
+        def run():
+            fn()
+            self.wake.set()
+        self.loop.call_soon_threadsafe(run)
+
     def go(self, step: int):
-        """Chiamabile da altri thread (tastiera, tray)."""
         def _go():
             self.idx = (self.idx + step) % len(self.pages)
             self.last_switch = time.monotonic()
-            self.wake.set()
-        self.loop.call_soon_threadsafe(_go)
+        self.call(_go)
+
+    def go_to(self, name: str):
+        def _go():
+            for i, p in enumerate(self.pages):
+                if p.name == name:
+                    self.idx, self.last_switch = i, time.monotonic()
+        self.call(_go)
+
+    def set_brightness(self, pct: int):
+        cfg = dict(self.cfg, brightness=pct)
+        save_config(cfg)  # persisted, and picked up by check_reload like any other change
 
     def quit(self):
         def _quit():
             self.running = False
-            self.wake.set()
-        self.loop.call_soon_threadsafe(_quit)
+        self.call(_quit)
 
     def auto_switch(self):
         media = self.state.get("media")
@@ -176,22 +205,38 @@ class App:
             self.idx = (self.idx + 1) % len(self.pages)
             self.last_switch = time.monotonic()
 
-    # --- ciclo principale -----------------------------------------------
+    def read_control(self):
+        """One-shot commands written by the settings window."""
+        if not paths.CONTROL.exists():
+            return
+        try:
+            cmd = json.loads(paths.CONTROL.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            cmd = {}
+        paths.CONTROL.unlink(missing_ok=True)
+        page = cmd.get("show")
+        if page in self.all_pages:
+            if page not in [p.name for p in self.pages]:
+                self.pages.append(self.all_pages[page])  # shown until the next config change
+            self.idx = [p.name for p in self.pages].index(page)
+            self.last_switch = time.monotonic()
+
+    # --- main loop ------------------------------------------------------
     async def poll(self, name: str):
         src = self.all_sources[name]
         while True:
             scfg = self.section(name)
             try:
                 self.state[name] = await src.fetch(scfg)
-            except Exception as e:  # rete giù, app chiusa, ecc.: tengo l'ultimo dato buono
+            except Exception as e:  # network down, app closed, ...: keep the last good data
                 log.warning("source %s: %r", name, e)
             await asyncio.sleep(scfg.get("interval", src.interval))
 
     async def tick(self):
         if not self.screen.ser:
             await asyncio.to_thread(self.screen.open)
-            log.info("schermo connesso su %s", self.screen.ser.port)
-            self.prev, self.screen_off = None, False
+            log.info("screen connected on %s", self.screen.ser.port)
+            self.prev, self.screen_off, self.missing_since, self.alerted = None, False, None, False
         if self.cfg.get("off_when_locked", True) and is_locked():
             if not self.screen_off:
                 self.screen.power(False)
@@ -203,34 +248,56 @@ class App:
         self.auto_switch()
         page = self.pages[self.idx]
         try:
-            img = page.render(self.state, self.screen.size, self.section(page.name))
+            if isinstance(page, layout.LayoutPage):
+                img = page.render(self.state, self.screen.size, {}, self.history_view)
+            else:
+                img = page.render(layout.with_clock(self.state, self.history_view), self.screen.size, self.section(page.name))
         except Exception:
-            log.exception("errore nella pagina %s", page.name)
+            log.exception("error in page %s", page.name)
             return
-        # invio solo il rettangolo cambiato: un frame intero costa ~2 s, un orologio ~40 ms
+        # send only the changed rectangle: a full frame costs ~2 s, a clock ~40 ms
         box = (0, 0, *img.size) if self.prev is None else ImageChops.difference(img, self.prev).getbbox()
         if box:
             await asyncio.to_thread(self.screen.show, img.crop(box), box[0], box[1])
         self.prev = img
 
+    def screen_missing(self):
+        self.missing_since = self.missing_since or time.monotonic()
+        if not self.alerted and time.monotonic() - self.missing_since > USB_ALERT_AFTER and self.icon:
+            self.alerted = True
+            try:
+                self.icon.notify(i18n._("Screen not found: check the USB cable."), paths.APP_NAME)
+            except Exception:
+                pass
+
     async def run(self):
         self.loop = asyncio.get_running_loop()
         self.check_reload()
+        last_history = 0.0
         while self.running:
-            if service.STOPFLAG.exists():
-                service.STOPFLAG.unlink(missing_ok=True)
+            if paths.STOPFLAG.exists():
+                paths.STOPFLAG.unlink(missing_ok=True)
                 break
             self.check_reload()
+            self.read_control()
+            if time.monotonic() - last_history >= 1:
+                self.history_view = self.history.record(self.pages, self.state)
+                last_history = time.monotonic()
             try:
                 await self.tick()
             except (serial.SerialException, OSError) as e:
-                log.warning("schermo non disponibile (%s), riprovo tra 3 s", e)
+                log.warning("screen not available (%s), retrying in 3 s", e)
                 self.screen.close()
+                self.screen_missing()
                 await asyncio.sleep(3)
                 continue
+            page = self.pages[self.idx]
+            animated = isinstance(page, layout.LayoutPage) and page.animated(self.screen.size) and not self.screen_off
+            fps = max(1, min(15, int(self.cfg.get("animation_fps", 8))))
+            timeout = 1 / fps if animated else 1 - time.time() % 1  # one tick per second, aligned for clocks
             self.wake.clear()
             try:
-                await asyncio.wait_for(self.wake.wait(), 1 - time.time() % 1)  # un giro al secondo, allineato
+                await asyncio.wait_for(self.wake.wait(), timeout)
             except TimeoutError:
                 pass
         try:
@@ -241,49 +308,67 @@ class App:
         self.screen.close()
 
 
-def start_tray(app: App):
-    import pystray
+def tray_icon_image():
     img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     d.rounded_rectangle((8, 2, 56, 62), 8, fill=(110, 170, 255))
     d.rectangle((14, 8, 50, 50), fill=(12, 14, 20))
-    menu = pystray.Menu(
-        pystray.MenuItem("Impostazioni", lambda: service.open_settings(), default=True),
-        pystray.MenuItem("Pagina successiva", lambda: app.go(1)),
-        pystray.MenuItem("Pagina precedente", lambda: app.go(-1)),
+    d.rectangle((20, 30, 26, 44), fill=(80, 210, 130))
+    d.rectangle((30, 22, 36, 44), fill=(250, 190, 70))
+    d.rectangle((40, 14, 46, 44), fill=(110, 170, 255))
+    return img
+
+
+def tray_menu(app: App):
+    import pystray
+    _ = i18n._
+    def page_item(p):  # pystray counts the action's arguments, so no default-argument lambdas
+        return pystray.MenuItem(getattr(p, "title", p.name), lambda icon, item: app.go_to(p.name),
+                                checked=lambda item: bool(app.pages) and app.pages[app.idx].name == p.name, radio=True)
+
+    def bright_item(v):
+        return pystray.MenuItem(f"{v}%", lambda icon, item: app.set_brightness(v),
+                                checked=lambda item: app.cfg.get("brightness") == v, radio=True)
+    page_items = [page_item(p) for p in app.pages] or [pystray.MenuItem("-", None, enabled=False)]
+    bright_items = [bright_item(v) for v in (10, 25, 40, 60, 80, 100)]
+    return pystray.Menu(
+        pystray.MenuItem(_("Settings"), lambda: service.open_settings(), default=True),
+        pystray.MenuItem(_("Page"), pystray.Menu(*page_items)),
+        pystray.MenuItem(_("Next page"), lambda: app.go(1)),
+        pystray.MenuItem(_("Brightness"), pystray.Menu(*bright_items)),
         pystray.Menu.SEPARATOR,
-        pystray.MenuItem("Esci", lambda: app.quit()),
+        pystray.MenuItem(_("Quit"), lambda: app.quit()),
     )
-    icon = pystray.Icon("schermetto", img, "Schermetto", menu)
-    icon.run_detached()
-    return icon
 
 
 def main():
-    handlers = [RotatingFileHandler(service.LOG, maxBytes=1_000_000, backupCount=1, encoding="utf-8")]
-    if sys.stderr:  # con pythonw non c'è console
+    paths.ensure_data()
+    handlers = [RotatingFileHandler(paths.LOG, maxBytes=1_000_000, backupCount=1, encoding="utf-8")]
+    if sys.stderr:  # pythonw / the frozen exe have no console
         handlers.append(logging.StreamHandler())
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", handlers=handlers)
     other = service.running_pid()
     if other and other != os.getpid():
-        log.info("già in esecuzione (pid %s)", other)
+        log.info("already running (pid %s)", other)
         return
-    service.PIDFILE.write_text(str(os.getpid()))
+    paths.PIDFILE.write_text(str(os.getpid()))
     app = App()
-    icon = None
+
+    async def run():
+        import pystray
+        app.loop = asyncio.get_running_loop()
+        i18n.set_language(load_config().get("language", "it"))
+        app.icon = pystray.Icon("turing-screen-studio", tray_icon_image(), paths.APP_NAME, tray_menu(app))
+        app.icon.run_detached()
+        await app.run()
     try:
-        async def run():
-            nonlocal icon
-            app.loop = asyncio.get_running_loop()
-            icon = start_tray(app)
-            await app.run()
         asyncio.run(run())
     except KeyboardInterrupt:
         pass
     finally:
-        if icon:
-            icon.stop()
-        service.PIDFILE.unlink(missing_ok=True)
+        if app.icon:
+            app.icon.stop()
+        paths.PIDFILE.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

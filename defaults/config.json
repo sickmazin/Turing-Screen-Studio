@@ -1,9 +1,11 @@
 {
+  "language": "it",
   "port": "AUTO",
-  "orientation": "reverse_landscape",
+  "orientation": "portrait",
   "brightness": 40,
-  "theme": "scuro",
+  "theme": "dark",
   "rotate_seconds": 0,
+  "animation_fps": 8,
   "media_focus": true,
   "off_when_locked": true,
   "key_next": "ctrl+shift+right",
@@ -11,27 +13,18 @@
   "pages": [
     "clock",
     "system",
+    "hardware",
     "media",
     "claude",
+    "agents",
     "weather",
-    "stocks"
+    "stocks",
+    "agenda",
+    "notifications"
   ],
   "weather": {
     "city": "Milano",
     "lat": 45.46,
     "lon": 9.19
-  },
-  "stocks": {
-    "tickers": [
-      "AAPL",
-      "NVDA",
-      "MSFT",
-      "BTC-USD",
-      "^GSPC"
-    ]
-  },
-  "claude": {
-    "active_minutes": 30,
-    "context_window": 200000
   }
 }
