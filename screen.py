@@ -52,6 +52,7 @@ class Screen:
         self.ser.write(bytes([HELLO] * 6))
         self.model = self.ser.read(6)  # 01x6 = UsbMonitor 3.5", empty = original Turing
         self.ser.reset_input_buffer()
+        self.power(True)  # the last run may have switched it off on quit
         self.set_orientation(self.orientation)
         self.set_brightness(self.brightness)
 
