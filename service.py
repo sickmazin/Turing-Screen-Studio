@@ -57,17 +57,16 @@ def stop(timeout=6.0):
     pid = running_pid()
     if not pid:
         return
-    paths.STOPFLAG.touch()
-    try:
-        p = psutil.Process(pid)
-        p.wait(timeout)
-    except psutil.TimeoutExpired:
+    paths.STOPFLAG.touch()  # the app deletes it when it sees it
+    # poll instead of psutil.wait(): waiting on an elevated process from a normal one is "access denied"
+    deadline = time.monotonic() + timeout
+    while psutil.pid_exists(pid) and time.monotonic() < deadline:
+        time.sleep(0.2)
+    if psutil.pid_exists(pid):
         try:
-            p.kill()
+            psutil.Process(pid).kill()
         except psutil.Error:
-            pass
-    except psutil.Error:
-        pass
+            return  # elevated and unresponsive: leave the flag, it will quit on its next tick
     paths.STOPFLAG.unlink(missing_ok=True)
 
 
