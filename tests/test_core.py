@@ -63,17 +63,6 @@ class Transcripts(unittest.TestCase):
         self.assertEqual(s["limits"], [{"label": "30 d", "pct": 72.0, "resets_at": None}])
         self.assertEqual((s["turns"], s["working"]), (2, True))  # second task still running
 
-    def test_gemini_reads_last_input_tokens(self):
-        d = Path(tempfile.mkdtemp()) / "proj" / "chats"
-        d.mkdir(parents=True)
-        p = d / "session.jsonl"
-        p.write_text("\n".join(json.dumps(x) for x in [
-            {"sessionId": "x"},
-            {"$set": {"messages": [{"type": "gemini", "model": "gemini-3", "tokens": {"input": 500}},
-                                   {"type": "gemini", "model": "gemini-3", "tokens": {"input": 800}}]}}]), encoding="utf-8")
-        s = agents.parse_gemini(p)
-        self.assertEqual((s["project"], s["model"], s["context"]), ("proj", "gemini-3", 800))
-
 
 class Liveness(unittest.TestCase):
     def test_keeps_newest_sessions_per_running_process(self):
@@ -86,17 +75,50 @@ class Liveness(unittest.TestCase):
 
     def test_closed_or_reused_pids_are_not_live(self):
         import os
+        import psutil
+        me = os.getpid()
+        filetime = int((psutil.Process(me).create_time() + 11644473600) * 1e7)
         d = Path(tempfile.mkdtemp())
-        (d / "1.json").write_text(json.dumps({"pid": 999_999_9, "sessionId": "gone"}), encoding="utf-8")
-        (d / "2.json").write_text(json.dumps({"pid": os.getpid(), "sessionId": "python-not-claude"}), encoding="utf-8")
-        (d / "3.json").write_text("not json", encoding="utf-8")
+        files = {"1": {"pid": 999_999_9, "sessionId": "gone"},
+                 "2": {"pid": me, "sessionId": "reused-pid", "procStart": str(filetime - 10**8)},  # started 10 s apart
+                 "3": {"pid": me, "sessionId": "npm-install", "procStart": str(filetime), "status": "busy"},
+                 "4": {"pid": me, "sessionId": "old-file-format", "procStartFt": str(filetime)}}
+        for n, data in files.items():
+            (d / f"{n}.json").write_text(json.dumps(data), encoding="utf-8")
+        (d / "5.json").write_text("not json", encoding="utf-8")
         old, claude.SESSIONS = claude.SESSIONS, d
-        try:
-            self.assertEqual(claude.live_sessions(), {})
+        try:  # this test runs as python.exe: the start time, not the name, must decide
+            self.assertEqual(claude.live_sessions(), {"npm-install": "busy", "old-file-format": ""})
             claude.SESSIONS = d / "missing"
             self.assertIsNone(claude.live_sessions())  # older Claude Code: fall back to recent files
         finally:
             claude.SESSIONS = old
+
+
+    def test_codex_launcher_and_child_count_as_one_session(self):
+        import os
+        from collections import Counter
+        from unittest import mock
+
+        class Proc:
+            def __init__(self, pid, name, ppid, cwd, cmd=()):
+                self.pid, self.info, self._cwd, self._cmd = pid, {"name": name, "ppid": ppid}, cwd, list(cmd)
+
+            def cwd(self):
+                return self._cwd
+
+            def cmdline(self):
+                return self._cmd
+
+        procs = [Proc(10, "node.exe", 1, "C:/Work/A", ["node", "C:\\npm\\node_modules\\@openai\\codex\\bin\\codex.js"]),
+                 Proc(11, "codex.exe", 10, "C:/Work/A"),       # native child of the launcher above
+                 Proc(12, "codex.exe", 11, "C:/Work/A", ["codex.exe", "app-server", "--managed-daemon"]),
+                 Proc(13, "codex.exe", 1, "C:/Users/me", ["codex.exe", "app-server", "daemon"]),  # outlived its chat
+                 Proc(20, "codex.exe", 1, "C:/Work/B"),        # a second, separate session
+                 Proc(30, "node.exe", 1, "C:/Work/C", ["node", "server.js"])]  # unrelated node app
+        with mock.patch("psutil.process_iter", return_value=procs):
+            live = agents.live_cwds()
+        self.assertEqual(live, Counter({os.path.normcase("C:/Work/A"): 1, os.path.normcase("C:/Work/B"): 1}))
 
 
 class Calendar(unittest.TestCase):

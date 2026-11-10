@@ -2,7 +2,7 @@
 
 A replacement for the stock *UsbMonitor / TURZX* software of the **Turing Smart Screen 3.5"** (USB `1A86:5722`,
 serial `USB35INCHIPSV2`), written in Python. Pages are layouts of widgets you build with a drag & drop editor:
-clock, system, hardware sensors, media player, Claude Code / Codex / Gemini sessions, weather, markets, calendar,
+clock, system, hardware sensors, media player, Claude Code / Codex sessions, weather, markets, calendar,
 Windows notifications, or anything you compose yourself.
 
 ## Features
@@ -10,7 +10,7 @@ Windows notifications, or anything you compose yourself.
 - **Pages made of widgets**, edited with drag & drop: move, resize, multi-select, group, alignment guides,
   undo, separate portrait and landscape layouts, "show on screen".
 - **Live data sources**: system (psutil), hardware sensors (LibreHardwareMonitor), media (Windows SMTC, with cover),
-  weather (Open-Meteo), stocks (Yahoo), iCal calendars, Windows notifications, Claude Code, Codex CLI, Gemini CLI.
+  weather (Open-Meteo), stocks (Yahoo), iCal calendars, Windows notifications, Claude Code, Codex CLI.
 - **Light animations**: animated weather (turning sun, drifting clouds, rain, snow, lightning, fog),
   scrolling text, animated GIF / APNG / WebP (e.g. animated emoji).
 - **Themes** (colours, fonts, per-page backgrounds) and **pages** can be exported and shared as

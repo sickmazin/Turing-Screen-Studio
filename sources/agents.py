@@ -1,12 +1,11 @@
-"""Terminal coding agents in one list: Claude Code, OpenAI Codex CLI, Gemini CLI. Newest activity first.
+"""Terminal coding agents in one list: Claude Code and OpenAI Codex CLI, newest activity first.
 
-Every session has the same shape, so one page layout works for all of them:
+Every session has the same shape, so one page layout works for both:
   {key, agent, title, project, model, context, window, context_pct, busy, age,
    output_tokens, turns, cost, limits: [{label, pct, resets_at}], limit_pct}
-Formats checked against real files:
-- Codex:  ~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl: session_meta (cwd), turn_context (model),
-          event_msg task_started/task_complete (turns, working), token_count (context, window, rate limits)
-- Gemini: ~/.gemini/tmp/<project>/chats/session-*.jsonl: messages of type "user" / "gemini" with tokens
+Only sessions still open are listed: Claude Code through ~/.claude/sessions, Codex through its running processes.
+Codex format checked against real files: ~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl with session_meta (cwd),
+turn_context (model), event_msg task_started/task_complete (turns, working), token_count (context, window, limits).
 """
 import asyncio
 import json
@@ -20,12 +19,11 @@ import psutil
 from sources import claude
 
 name = "agents"
-settings = {"active_minutes": 30, "gemini_context_window": 1000000}
+settings = {"active_minutes": 30}  # used only with Claude Code versions that do not report open sessions
 interval = 3
 
 CODEX = Path.home() / ".codex" / "sessions"
-GEMINI = Path.home() / ".gemini" / "tmp"
-TITLES = {"Claude": "CLAUDE CODE", "Codex": "CODEX", "Gemini": "GEMINI CLI"}
+TITLES = {"Claude": "CLAUDE CODE", "Codex": "CODEX"}
 _cache = {}
 
 
@@ -44,8 +42,8 @@ def window_label(minutes):
 
 
 def parse_codex(path: Path) -> dict:
-    s = {"agent": "Codex", "project": "", "model": "", "context": 0, "window": 0, "output_tokens": 0, "turns": 0,
-         "limits": [], "working": False}
+    s = {"agent": "Codex", "project": "", "cwd": "", "model": "", "context": 0, "window": 0, "output_tokens": 0,
+         "turns": 0, "limits": [], "working": False}
     started = completed = 0
     with path.open(encoding="utf-8", errors="replace") as f:
         for line in f:
@@ -77,33 +75,6 @@ def parse_codex(path: Path) -> dict:
     return s
 
 
-def parse_gemini(path: Path) -> dict:
-    s = {"agent": "Gemini", "project": path.parent.parent.name, "model": "", "context": 0, "window": 0,
-         "output_tokens": 0, "turns": 0, "limits": []}
-    root = path.parent.parent / ".project_root"
-    if root.exists():
-        s["cwd"] = root.read_text(encoding="utf-8").strip()
-        s["project"] = Path(s["cwd"]).name or s["project"]
-    messages = {}
-    with path.open(encoding="utf-8", errors="replace") as f:
-        for line in f:
-            try:
-                e = json.loads(line)
-            except ValueError:
-                continue
-            for m in (e.get("$set") or {}).get("messages", []) + ([e] if "type" in e and "id" in e else []):
-                if isinstance(m, dict):
-                    messages[m.get("id") or id(m)] = m  # the file rewrites the whole list: keep each message once
-    for m in messages.values():
-        if m.get("type") == "user":
-            s["turns"] += 1
-        elif m.get("type") == "gemini" and isinstance(m.get("tokens"), dict):
-            s["model"] = m.get("model") or s["model"]
-            s["context"] = m["tokens"].get("input", s["context"])
-            s["output_tokens"] += m["tokens"].get("output", 0)
-    return s
-
-
 def from_claude(c: dict) -> dict:
     rl = c.get("rate_limits") or {}
     limits = [{"label": label, "pct": rl[k]["used_percentage"], "resets_at": rl[k].get("resets_at")}
@@ -115,24 +86,22 @@ def from_claude(c: dict) -> dict:
             "limits": limits}
 
 
-def live_cwds():
-    """Working folders of running Codex / Gemini CLI processes, counted once per session (not per child process)."""
+def live_cwds() -> Counter:
+    """Working folders of running Codex processes, counted once per session (not per child process).
+
+    Tree seen on Windows: node (codex.js) -> codex.exe -> codex.exe app-server (background daemon, may outlive the chat)."""
     found = {}
-    for p in psutil.process_iter(["name", "cmdline", "ppid"]):
+    for p in psutil.process_iter(["name", "ppid"]):
         name = (p.info["name"] or "").lower()
-        args = " ".join(p.info["cmdline"] or []).lower().replace("\\", "/") if name.startswith("node") else ""
-        agent = ("Codex" if name.startswith("codex") or "@openai/codex" in args else
-                 "Gemini" if name.startswith("gemini") or "gemini-cli" in args else None)
-        if agent:
-            try:
-                found[p.pid] = (agent, os.path.normcase(p.cwd()), p.info["ppid"])
-            except psutil.Error:
-                pass
-    out = {"Codex": Counter(), "Gemini": Counter()}
-    for agent, cwd, ppid in found.values():
-        if ppid not in found:  # the npm "node" launcher and its native child are one session
-            out[agent][cwd] += 1
-    return out
+        if not name.startswith(("codex", "node")):
+            continue  # command lines are slow to read on Windows: only for the candidates
+        try:
+            cmd = " ".join(p.cmdline()).lower().replace("\\", "/")
+            if "app-server" not in cmd and (name.startswith("codex") or "@openai/codex" in cmd):
+                found[p.pid] = (os.path.normcase(p.cwd()), p.info["ppid"])
+        except psutil.Error:
+            pass
+    return Counter(cwd for cwd, ppid in found.values() if ppid not in found)  # launcher + native child = one
 
 
 def keep_live(sessions, counts):
@@ -147,28 +116,23 @@ def keep_live(sessions, counts):
 
 def collect(cfg):
     now = time.time()
-    minutes = cfg.get("active_minutes", 30)
-    out = [from_claude(c) for c in claude.collect({**claude.settings, **cfg.get("claude", {}), "active_minutes": minutes})]
+    out = [from_claude(c) for c in claude.collect({"active_minutes": cfg.get("active_minutes", 30)})]
     live = live_cwds()
-    for agent, files, parse, window in (("Codex", CODEX.glob("*/*/*/*.jsonl"), parse_codex, 0),
-                                        ("Gemini", GEMINI.glob("*/chats/*.jsonl"), parse_gemini,
-                                         cfg.get("gemini_context_window", 1_000_000))):
-        if not live[agent]:
-            continue  # no process running: nothing to show (and no files to parse)
+    if live:  # no Codex process running: nothing to show and no files to parse
         found = []
-        for p in files:
+        for p in CODEX.glob("*/*/*/*.jsonl"):
             age = now - p.stat().st_mtime
             if age > 7 * 86400:
                 continue  # an open session has written in the last week; skips parsing the whole history
-            s = dict(_cached(p, parse), age=age, session_id=p.stem)
+            s = dict(_cached(p, parse_codex), age=age, session_id=p.stem)
             if not (s["model"] or s["context"]):
                 continue
-            s["window"] = s["window"] or window or 200_000
+            s["window"] = s["window"] or 200_000
             s["context_pct"] = s["context"] / s["window"] * 100
-            s["busy"] = s.pop("working", False) and age < 600 or age < 20
-            s.setdefault("cost", None)
+            s["busy"] = s.pop("working") and age < 600 or age < 20
+            s["cost"] = None
             found.append(s)
-        out.extend(keep_live(found, live[agent]))
+        out.extend(keep_live(found, live))
     for s in out:
         s["key"] = f"{s['agent']}:{s['session_id']}"
         s["title"] = TITLES.get(s["agent"], s["agent"].upper())

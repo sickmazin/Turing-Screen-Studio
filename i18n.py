@@ -82,7 +82,7 @@ IT = {
     "Impostazioni > calendario > Integra calendario > Indirizzo segreto in formato iCal. Outlook: Impostazioni > "
     "Calendario > Calendari condivisi > Pubblica un calendario > ICS.",
     "active_minutes": "minuti di attività", "city": "città", "context_window": "finestra di contesto", "days": "giorni",
-    "disk": "disco", "gemini_context_window": "finestra di contesto Gemini", "hide_apps": "app da nascondere",
+    "disk": "disco", "hide_apps": "app da nascondere",
     "lat": "latitudine", "lon": "longitudine", "max": "massimo", "tickers": "titoli", "urls": "indirizzi iCal",
     # --- theme tab
     "Preview": "Anteprima", "Duplicate": "Duplica", "Rename": "Rinomina", "Delete": "Elimina", "Import…": "Importa…",

@@ -13,7 +13,7 @@ import psutil
 import paths
 
 name = "claude"
-settings = {"active_minutes": 30, "context_window": 200000}  # defaults, editable in the Data tab
+settings = {}  # only read through the agents source; the real context window comes from the status line
 interval = 3
 
 PROJECTS = Path.home() / ".claude" / "projects"
@@ -76,6 +76,17 @@ def merge_statusline(s: dict, window_default: int):
     s["rate_limits"] = d.get("rate_limits")
 
 
+def same_process(d) -> bool:
+    """The pid still belongs to the Claude Code that wrote the file (pids get reused): compare start times.
+
+    Works whatever the process is called (claude.exe, or node.exe for npm installs)."""
+    p = psutil.Process(int(d["pid"]))
+    start = d.get("procStart") or d.get("procStartFt")  # Windows FILETIME: 100 ns ticks since 1601
+    if start:
+        return abs(int(start) / 1e7 - 11644473600 - p.create_time()) < 1
+    return "claude" in p.name().lower()
+
+
 def live_sessions():
     """sessionId -> status ("busy", ...) of Claude Code processes still running, from ~/.claude/sessions/<pid>.json.
 
@@ -86,7 +97,7 @@ def live_sessions():
     for f in SESSIONS.glob("*.json"):
         try:
             d = json.loads(f.read_text(encoding="utf-8"))
-            if d.get("sessionId") and "claude" in psutil.Process(int(d["pid"])).name().lower():  # pid not reused
+            if d.get("sessionId") and same_process(d):
                 out[d["sessionId"]] = d.get("status", "")
         except (OSError, ValueError, KeyError, psutil.Error):
             continue  # stale file of a closed session

@@ -127,7 +127,7 @@ media = {"name": "Media",
                *media_bits(320, 278, 144)]}
 
 
-# --- coding agent: one copy of this page per active session (Claude Code, Codex, Gemini CLI)
+# --- coding agent: one copy of this page per active session (Claude Code, Codex)
 def stats(x, y, cw):
     cells = [("{agent.output_tokens:human}", "output"), ("{agent.turns}", "turns"),
              ("${agent.cost:.2f}", "cost{agent.cost:hide}")]

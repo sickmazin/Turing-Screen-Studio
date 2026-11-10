@@ -23,7 +23,7 @@ from ui import fit, font, human, level_color, paste_emoji
 FIELD = re.compile(r"\{([^{}:]+)(?::([^{}]*))?\}")
 COLOR_CHOICES = ["fg", "muted", "accent", "card", "bg", "good", "warn", "bad", "level", "sign"]
 CLAUDE_ORANGE = (217, 119, 87)
-AGENT_COLORS = {"Claude": CLAUDE_ORANGE, "Codex": (16, 163, 127), "Gemini": (66, 133, 244)}
+AGENT_COLORS = {"Claude": CLAUDE_ORANGE, "Codex": (16, 163, 127)}
 
 # Open-Meteo WMO codes -> (emoji, description, animation kind)
 WEATHER = [
@@ -714,7 +714,7 @@ class Sessions(Widget):
 
 @widget
 class Agents(Widget):
-    """Terminal agents (Claude Code, Codex, Gemini CLI): one row per active session."""
+    """Terminal agents (Claude Code, Codex): one row per open session."""
     type, label, size, needs = "agents", "Agent sessions", (296, 200), ("agents",)
     props = [("start", "int", 0, "From session number"), ("row", "int", 46, "Row height")]
 
