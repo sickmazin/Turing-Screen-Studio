@@ -27,7 +27,7 @@ def calls_to_underscore(path):
 
 
 found = set()
-for f in ("settings.py", "editor.py", "main.py", "widgets.py", "layout.py"):
+for f in ("settings.py", "editor.py", "main.py", "widgets.py", "layout.py", "stock_picker.py"):
     found |= calls_to_underscore(ROOT / f)
 for cls in widgets.WIDGETS.values():
     found.add(cls.label)

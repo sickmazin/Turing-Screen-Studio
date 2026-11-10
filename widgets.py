@@ -646,6 +646,84 @@ class Ticker(Widget):
             polyline(d, spark, q["series"], c, 2)
 
 
+def grid_shape(n, w, h, target=1.1):
+    """Columns and rows for n cards in a w x h box: card shape close to `target` (width/height), few empty cells."""
+    best = None
+    for cols in range(1, n + 1):
+        rows = -(-n // cols)
+        score = abs(math.log((w / cols) / (h / rows) / target)) + 0.3 * (cols * rows - n)
+        if best is None or score < best[0]:
+            best = (score, cols, rows)
+    return best[1], best[2]
+
+
+def stock_card(d, box, q, radius):
+    """Symbol and change on top, price (and name when tall enough), then the day's chart."""
+    x0, y0, x1, y1 = box
+    w, h = x1 - x0, y1 - y0
+    d.rounded_rectangle(box, radius, fill=ui.CARD)
+    c = ui.GOOD if q["change"] >= 0 else ui.BAD
+    pad = max(6, min(w, h) // 12)
+    size = int(max(12, min(20, h / 6, w / 6)))
+    title, small, bold = font(size, True), font(max(11, size - 4)), font(max(11, size - 4), True)
+    change = f"{q['change']:+.2f}%"
+    cw = d.textlength(change, font=bold)
+    y = y0 + pad
+    beside = d.textlength(q["symbol"], font=title) + cw + 3 * pad <= w  # else the change moves to the price row
+    d.text((x0 + pad, y), fit(d, q["symbol"], title, int(w - 2 * pad - (cw + pad if beside else 0))), font=title, fill=ui.FG)
+    if beside:
+        d.text((x1 - pad, y + size - bold.size), change, font=bold, fill=c, anchor="ra")
+    y += size + 4
+    room = w - 2 * pad - (0 if beside else cw + pad)
+    price = f"{q['price']:,.2f} {q.get('currency', '')}".strip()
+    for shorter in (f"{q['price']:,.2f}", human(q["price"])):  # drop the currency, then go compact (74.3k)
+        if d.textlength(price, font=small) <= room:
+            break
+        price = shorter
+    d.text((x0 + pad, y), fit(d, price, small, int(room)), font=small, fill=ui.FG)
+    if not beside:
+        d.text((x1 - pad, y), change, font=bold, fill=c, anchor="ra")
+    y += small.size + 3
+    if h >= 120 and q.get("name") and q["name"] != q["symbol"]:
+        d.text((x0 + pad, y), fit(d, q["name"], font(11), w - 2 * pad), font=font(11), fill=ui.MUTED)
+        y += 15
+    if y1 - pad - (y + 4) > 10 and len(q.get("series") or []) >= 2:
+        polyline(d, (x0 + pad, y + 4, x1 - pad, y1 - pad), q["series"], c, 2)
+
+
+@widget
+class Markets(Widget):
+    """All the chosen stocks in one widget: rows while they are few, then a grid of cards."""
+    type, label, size, needs = "markets", "Markets (list or grid)", (296, 436), ("stocks",)
+    props = [("list_up_to", "int", 5, "Rows up to (then grid)"), ("max", "int", 12, "Maximum stocks shown"),
+             ("gap", "int", 8, "Gap"), ("radius", "int", 10, "Corner radius")]
+
+    @classmethod
+    def draw(cls, img, d, box, w, state):
+        x0, y0, x1, y1 = box
+        quotes = get(state, "stocks")
+        if not isinstance(quotes, list) or not quotes:
+            d.text(((x0 + x1) // 2, (y0 + y1) // 2), _("Waiting for data…"), font=font(16), fill=ui.MUTED, anchor="mm")
+            return
+        quotes = quotes[:max(1, int(cls.p(w, "max")))]
+        n, gap, radius = len(quotes), int(cls.p(w, "gap")), int(cls.p(w, "radius"))
+        width, height = x1 - x0, y1 - y0
+        if n <= int(cls.p(w, "list_up_to")):
+            rh = min(90, (height + gap) / n)
+            for i in range(n):
+                top = y0 + i * rh
+                Ticker.draw(img, d, (x0, int(top), x1, int(top + rh - gap)), {"index": i, "radius": radius}, state)
+            return
+        cols, rows = grid_shape(n, width, height)
+        cw, ch = (width - gap * (cols - 1)) / cols, (height - gap * (rows - 1)) / rows
+        for i, q in enumerate(quotes):
+            r, c = divmod(i, cols)
+            in_row = min(cols, n - r * cols)
+            shift = (cols - in_row) * (cw + gap) / 2  # centre an incomplete last row
+            left, top = x0 + shift + c * (cw + gap), y0 + r * (ch + gap)
+            stock_card(d, (int(left), int(top), int(left + cw), int(top + ch)), q, radius)
+
+
 @widget
 class Forecast(Widget):
     type, label, size, needs = "forecast", "Forecast day", (70, 160), ("weather",)

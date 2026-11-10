@@ -69,6 +69,14 @@ IT = {
     "from pawnio.eu, then restart the app.": "Sensori hardware: temperature e potenza della CPU richiedono il driver "
     "gratuito PawnIO usato da LibreHardwareMonitor. Installalo da pawnio.eu e riavvia l'app.",
     "max_agent_pages": "massimo pagine agente",
+    "Choose stocks": "Scegli i titoli", "Choose stocks…": "Scegli titoli…", "Search": "Cerca", "All": "Tutte",
+    "Symbol": "Simbolo", "Name": "Nome", "Category": "Categoria", "Add →": "Aggiungi →", "Add": "Aggiungi",
+    "Other Yahoo symbol:": "Altro simbolo Yahoo:", "Chosen": "Scelti", "Cancel": "Annulla",
+    "With more than 5 stocks the page becomes a grid of cards.": "Con più di 5 titoli la pagina diventa una griglia di card.",
+    "US stocks": "Azioni USA", "European stocks": "Azioni Europa", "Italian stocks": "Azioni Italia", "ETF": "ETF",
+    "Indices": "Indici", "Commodities & FX": "Materie prime e valute", "Crypto": "Crypto",
+    "Markets (list or grid)": "Mercati (lista o griglia)", "Rows up to (then grid)": "Righe fino a (poi griglia)",
+    "Maximum stocks shown": "Massimo titoli mostrati", "Gap": "Spaziatura",
     "Next page shortcut": "Scorciatoia pagina successiva", "Previous page shortcut": "Scorciatoia pagina precedente",
     # --- data tab
     "Settings of the data sources used by the widgets.": "Impostazioni delle fonti di dati usate dai widget.",

@@ -15,48 +15,14 @@
    "fallback": ""
   },
   {
-   "type": "ticker",
+   "type": "markets",
    "x": 12,
-   "y": 40,
+   "y": 36,
    "w": 296,
-   "h": 79,
-   "index": 0,
-   "radius": 10
-  },
-  {
-   "type": "ticker",
-   "x": 12,
-   "y": 127,
-   "w": 296,
-   "h": 79,
-   "index": 1,
-   "radius": 10
-  },
-  {
-   "type": "ticker",
-   "x": 12,
-   "y": 214,
-   "w": 296,
-   "h": 79,
-   "index": 2,
-   "radius": 10
-  },
-  {
-   "type": "ticker",
-   "x": 12,
-   "y": 301,
-   "w": 296,
-   "h": 79,
-   "index": 3,
-   "radius": 10
-  },
-  {
-   "type": "ticker",
-   "x": 12,
-   "y": 388,
-   "w": 296,
-   "h": 79,
-   "index": 4,
+   "h": 436,
+   "list_up_to": 5,
+   "max": 12,
+   "gap": 8,
    "radius": 10
   }
  ],
@@ -75,48 +41,14 @@
    "fallback": ""
   },
   {
-   "type": "ticker",
+   "type": "markets",
    "x": 12,
-   "y": 36,
+   "y": 32,
    "w": 456,
-   "h": 50,
-   "index": 0,
-   "radius": 10
-  },
-  {
-   "type": "ticker",
-   "x": 12,
-   "y": 92,
-   "w": 456,
-   "h": 50,
-   "index": 1,
-   "radius": 10
-  },
-  {
-   "type": "ticker",
-   "x": 12,
-   "y": 148,
-   "w": 456,
-   "h": 50,
-   "index": 2,
-   "radius": 10
-  },
-  {
-   "type": "ticker",
-   "x": 12,
-   "y": 204,
-   "w": 456,
-   "h": 50,
-   "index": 3,
-   "radius": 10
-  },
-  {
-   "type": "ticker",
-   "x": 12,
-   "y": 260,
-   "w": 456,
-   "h": 50,
-   "index": 4,
+   "h": 282,
+   "list_up_to": 5,
+   "max": 12,
+   "gap": 6,
    "radius": 10
   }
  ]

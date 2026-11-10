@@ -189,8 +189,8 @@ weather = {"name": "Weather",
 
 # --- stocks
 stocks = {"name": "Markets",
- "portrait": [*header("MARKETS", 320), *[W("ticker", 12, 40 + i * 87, 296, 79, index=i, radius=10) for i in range(5)]],
- "landscape": [*header("MARKETS", 480), *[W("ticker", 12, 36 + i * 56, 456, 50, index=i, radius=10) for i in range(5)]]}
+ "portrait": [*header("MARKETS", 320), W("markets", 12, 36, 296, 436, list_up_to=5, max=12, gap=8, radius=10)],
+ "landscape": [*header("MARKETS", 480), W("markets", 12, 32, 456, 282, list_up_to=5, max=12, gap=6, radius=10)]}
 
 # --- calendar and notifications
 agenda = {"name": "Agenda",

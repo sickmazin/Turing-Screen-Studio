@@ -116,6 +116,26 @@ class DefaultLayouts(unittest.TestCase):
         self.assertFalse(pages["clock"].animated((320, 480)))
 
 
+class MarketsGrid(unittest.TestCase):
+    def test_grid_shape_follows_count_and_orientation(self):
+        from widgets import grid_shape
+        self.assertEqual([grid_shape(n, 296, 436) for n in (6, 9, 12)], [(2, 3), (3, 3), (3, 4)])  # portrait
+        self.assertEqual([grid_shape(n, 456, 282) for n in (6, 9, 12)], [(3, 2), (3, 3), (4, 3)])  # landscape
+
+    def test_rows_up_to_five_then_cards(self):
+        from widgets import draw_all
+        quotes = sample_state()["stocks"]
+        w = {"type": "markets", "x": 0, "y": 0, "w": 296, "h": 436, "list_up_to": 5}
+        for n in (5, 6):
+            errors = []
+            img = Image.new("RGB", (296, 436))
+            draw_all(img, [w], {"stocks": (quotes * 2)[:n]}, on_error=lambda w, e: errors.append(e))
+            self.assertEqual(errors, [])
+            # a grid leaves a vertical gap between the two card columns at the centre; the list does not
+            column = {img.getpixel((148, y)) for y in range(60, 400)}
+            self.assertEqual(len(column) == 1, n == 6, n)
+
+
 class AgentPages(unittest.TestCase):
     def test_one_page_per_session_and_one_when_none(self):
         data = json.loads((DEFAULTS / "claude.json").read_text(encoding="utf-8"))

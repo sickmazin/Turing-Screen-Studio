@@ -6,6 +6,8 @@ import asyncio
 
 import requests
 
+from stock_catalog import NAMES
+
 name = "stocks"
 settings = {"tickers": ["AAPL", "NVDA", "MSFT", "BTC-USD", "^GSPC"]}  # defaults, editable in the Data tab
 interval = 60
@@ -22,11 +24,11 @@ def _get(symbol):
     closes = [c for c in res["indicators"]["quote"][0].get("close") or [] if c is not None]
     price = meta["regularMarketPrice"]
     prev = meta.get("chartPreviousClose") or meta.get("previousClose") or price
-    return {"symbol": symbol, "price": price, "prev": prev, "change": (price - prev) / prev * 100 if prev else 0,
-            "currency": meta.get("currency", ""), "series": closes}
+    return {"symbol": symbol, "name": NAMES.get(symbol) or meta.get("shortName") or symbol, "price": price, "prev": prev,
+            "change": (price - prev) / prev * 100 if prev else 0, "currency": meta.get("currency", ""), "series": closes}
 
 
 async def fetch(cfg):
-    symbols = cfg.get("tickers", ["AAPL", "NVDA", "BTC-USD"])
+    symbols = cfg.get("tickers") or settings["tickers"]
     results = await asyncio.gather(*(asyncio.to_thread(_get, s) for s in symbols), return_exceptions=True)
     return [r for r in results if not isinstance(r, Exception)]

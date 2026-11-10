@@ -26,6 +26,7 @@ from editor import PageEditor
 from i18n import _
 from main import load, load_config, load_pages, save_config
 from screen import Screen
+from stock_picker import StockPicker
 
 ORIENTATIONS = ["portrait", "reverse_portrait", "landscape", "reverse_landscape"]
 ORIENT_LABELS = {"portrait": "Portrait", "reverse_portrait": "Portrait (upside down)",
@@ -260,6 +261,15 @@ class Settings(tk.Tk):
                 var = tk.BooleanVar(value=value)
                 ttk.Checkbutton(box, variable=var).grid(row=r, column=1, sticky="w")
                 var.trace_add("write", lambda *a, k=key, v=var: self.set_source(name, k, v.get()))
+                continue
+            if (name, key) == ("stocks", "tickers"):  # chosen in a window with the catalog, not typed
+                row = ttk.Frame(box)
+                row.grid(row=r, column=1, sticky="w")
+                summary = ", ".join(value[:8]) + (f" … (+{len(value) - 8})" if len(value) > 8 else "")
+                ttk.Label(row, text=f"{len(value)}: {summary}", wraplength=520).pack(side="left")
+                ttk.Button(row, text=_("Choose stocks…"), command=lambda b=box, v=value: StockPicker(
+                    self, v, lambda chosen: (self.set_source("stocks", "tickers", chosen), self.fill_form(b, "stocks")))
+                ).pack(side="left", padx=8)
                 continue
             e = ttk.Entry(box, width=70)
             e.insert(0, ", ".join(map(str, value)) if isinstance(value, list) else str(value))
