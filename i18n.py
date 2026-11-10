@@ -30,8 +30,8 @@ IT = {
     "Limit 7 days  {claude.0.rate_limits.seven_day.used_percentage:.0f}%":
         "Limite 7 giorni  {claude.0.rate_limits.seven_day.used_percentage:.0f}%",
     "reset {claude.0.rate_limits.five_hour.resets_at:reset}": "reset {claude.0.rate_limits.five_hour.resets_at:reset}",
-    "feels {weather.feels:.0f}° · humidity {weather.humidity}% · wind {weather.wind:.0f} km/h":
-        "percepita {weather.feels:.0f}° · umidità {weather.humidity}% · vento {weather.wind:.0f} km/h",
+    "Feels like {weather.feels:.0f}° · Humidity {weather.humidity}% · Wind {weather.wind:.0f} km/h":
+        "Percepita {weather.feels:.0f}° · Umidità {weather.humidity}% · Vento {weather.wind:.0f} km/h",
     "No upcoming events": "Nessun evento in arrivo", "No notifications": "Nessuna notifica",
     "No agents running": "Nessun agente attivo",
     "Today": "Oggi", "Tomorrow": "Domani", "all day": "tutto il giorno",

@@ -172,7 +172,7 @@ agent = {"name": "Agent", "per_agent": True,
                W("agents", 200, 222, 264, 92, start=0, row=30)]}
 
 # --- weather with animation
-DET = "feels {weather.feels:.0f}° · humidity {weather.humidity}% · wind {weather.wind:.0f} km/h"
+DET = "Feels like {weather.feels:.0f}° · Humidity {weather.humidity}% · Wind {weather.wind:.0f} km/h"
 weather = {"name": "Weather",
  "portrait": [*header("WEATHER", 320, "{weather.city}"),
               W("weather_anim", 56, 34, 208, 116, field="weather.code", intensity=22),
@@ -184,7 +184,7 @@ weather = {"name": "Weather",
                W("weather_anim", 16, 30, 150, 110, field="weather.code", intensity=20),
                T(180, 36, 200, 76, "{weather.temp:.0f}°", 60, True, fallback="Waiting for data…"),
                T(180, 106, 220, 28, "{weather.code:weather}", 19, color="accent"),
-               T(24, 144, 432, 18, DET, 12, color="muted"),
+               T(24, 144, 432, 18, DET, 12, color="muted", align="center"),
                *[W("forecast", 16 + i * 113, 168, 108, 140, index=i + 1, radius=10) for i in range(4)]]}
 
 # --- stocks

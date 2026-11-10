@@ -68,7 +68,7 @@
    "y": 256,
    "w": 320,
    "h": 20,
-   "text": "feels {weather.feels:.0f}° · humidity {weather.humidity}% · wind {weather.wind:.0f} km/h",
+   "text": "Feels like {weather.feels:.0f}° · Humidity {weather.humidity}% · Wind {weather.wind:.0f} km/h",
    "size": 12,
    "bold": false,
    "color": "muted",
@@ -180,11 +180,11 @@
    "y": 144,
    "w": 432,
    "h": 18,
-   "text": "feels {weather.feels:.0f}° · humidity {weather.humidity}% · wind {weather.wind:.0f} km/h",
+   "text": "Feels like {weather.feels:.0f}° · Humidity {weather.humidity}% · Wind {weather.wind:.0f} km/h",
    "size": 12,
    "bold": false,
    "color": "muted",
-   "align": "left",
+   "align": "center",
    "fallback": ""
   },
   {

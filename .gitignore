@@ -11,3 +11,4 @@ build/
 dist/
 vendor/
 *.spec.bak
+codex.svg
