@@ -25,7 +25,9 @@ MAX_BYTES = 1_000_000      # files come from a third-party site
 CRYPTO = {s for s, _n in CATALOG["Crypto"]}
 EMOJI = {"GC=F": "🥇", "SI=F": "🥈", "PL=F": "⚪", "HG=F": "🟠", "CL=F": "🛢️", "BZ=F": "🛢️", "NG=F": "🔥",
          "ZW=F": "🌾", "EURUSD=X": "💶", "EURCHF=X": "💶", "EURGBP=X": "💶", "GBPUSD=X": "💷", "USDJPY=X": "💴",
-         "DX-Y.NYB": "💵"}
+         "DX-Y.NYB": "💵",
+         # gold/silver ETFs: their logos are a plain bar shape that turns into a blank rectangle once recoloured
+         "GLD": "🥇", "IGLN.L": "🥇", "PHAU.MI": "🥇", "SLV": "🥈"}
 COUNTRY = {"^GSPC": "US", "^IXIC": "US", "^NDX": "US", "^DJI": "US", "^RUT": "US", "^VIX": "US", "^STOXX50E": "EU",
            "^GDAXI": "DE", "^FCHI": "FR", "FTSEMIB.MI": "IT", "^FTSE": "UK", "^IBEX": "ES", "^SSMI": "CH",
            "^N225": "JP", "^HSI": "HK", "000001.SS": "CN"}

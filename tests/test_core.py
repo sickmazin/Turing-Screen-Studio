@@ -174,6 +174,7 @@ class Logos(unittest.TestCase):
         self.assertTrue(logos.urls("BTC-USD")[0].endswith("crypto_icons/BTC.png"))
         self.assertTrue(logos.urls("EURUSD=X")[0].endswith("forex_icons/EURUSD.png"))
         self.assertEqual((logos.urls("GC=F"), logos.urls("^GSPC")), ([], []))   # emoji / country badge instead
+        self.assertEqual((logos.urls("GLD"), logos.EMOJI["GLD"]), ([], "🥇"))  # gold ETF: emoji, not a blank bar
 
     def test_only_transparent_grey_logos_are_recoloured(self):
         import logos
