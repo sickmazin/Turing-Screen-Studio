@@ -6,6 +6,7 @@ import asyncio
 
 import requests
 
+import logos
 from stock_catalog import NAMES
 
 name = "stocks"
@@ -24,7 +25,8 @@ def _get(symbol):
     closes = [c for c in res["indicators"]["quote"][0].get("close") or [] if c is not None]
     price = meta["regularMarketPrice"]
     prev = meta.get("chartPreviousClose") or meta.get("previousClose") or price
-    return {"symbol": symbol, "name": NAMES.get(symbol) or meta.get("shortName") or symbol, "price": price, "prev": prev,
+    return {"symbol": symbol, "name": NAMES.get(symbol) or meta.get("shortName") or symbol, "logo": logos.logo(symbol),
+            "price": price, "prev": prev,
             "change": (price - prev) / prev * 100 if prev else 0, "currency": meta.get("currency", ""), "series": closes}
 
 

@@ -603,17 +603,45 @@ class Play(Widget):
     def draw(cls, img, d, box, w, state):
         x0, y0, x1, y1 = box
         c = color(cls.p(w, "color"))
-        if get(state, "media.playing"):
-            d.polygon([(x0, y0), (x1, (y0 + y1) / 2), (x0, y1)], fill=c)
-        else:
+        if get(state, "media.playing"):  # like a player's button: pause while playing, play while paused
             bw = (x1 - x0) / 3
             d.rectangle((x0, y0, x0 + bw, y1), fill=c)
             d.rectangle((x1 - bw, y0, x1, y1), fill=c)
+        else:
+            d.polygon([(x0, y0), (x1, (y0 + y1) / 2), (x0, y1)], fill=c)
+
+
+def _logo_tile(logo, size):
+    """Logo on a white rounded square, like an app icon: dark logos stay visible on dark cards."""
+    tile = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    ImageDraw.Draw(tile).rounded_rectangle((0, 0, size - 1, size - 1), max(3, size // 5), fill=(255, 255, 255, 255))
+    inner = logo.copy()
+    inner.thumbnail((int(size * 0.78), int(size * 0.78)), Image.Resampling.LANCZOS)
+    tile.alpha_composite(inner, ((size - inner.width) // 2, (size - inner.height) // 2))
+    return tile
+
+
+def symbol_icon(img, d, xy, size, q):
+    """Logo, else emoji (currencies, commodities), else a badge with the country code (indices) or the initial."""
+    import logos
+    x, y = int(xy[0]), int(xy[1])
+    if q.get("logo") is not None:
+        tile = _memo(_logo_tile, q["logo"], size)
+        img.paste(tile, (x, y), tile)
+        return
+    emoji = logos.EMOJI.get(q["symbol"])
+    if emoji:
+        paste_emoji(img, (x + size // 2, y + size // 2), emoji, int(size * 0.85))
+        return
+    code = logos.COUNTRY.get(q["symbol"]) or q["symbol"].lstrip("^")[:1]
+    d.rounded_rectangle((x, y, x + size - 1, y + size - 1), max(3, size // 5), fill=ui.ACCENT if len(code) > 1 else ui.MUTED)
+    d.text((x + size // 2, y + size // 2), code, font=font(max(8, int(size * (0.42 if len(code) > 1 else 0.55))), True),
+           fill=ui.BG, anchor="mm")
 
 
 @widget
 class Ticker(Widget):
-    """Card for one stock: one line when short (landscape), two lines when tall."""
+    """Row for one stock: icon, name, price, chart, change. One line when short (landscape), two when tall."""
     type, label, size, needs = "ticker", "Stock", (296, 76), ("stocks",)
     props = [("index", "int", 0, "Stock number (0 = first)"), ("radius", "int", 10, "Corner radius")]
 
@@ -629,16 +657,19 @@ class Ticker(Widget):
         change, price = f"{q['change']:+.2f}%", f"{q['price']:,.2f}"
         big, small = font(18, True), font(16)
         cw = d.textlength(change, font=big)
+        icon = max(16, min(40, height - 20))
+        symbol_icon(img, d, (x0 + 10, y0 + (height - icon) // 2), icon, q)
+        tx = x0 + 10 + icon + 10  # text starts after the icon
         if height >= 64:  # two lines: name above price, chart on the right
-            d.text((x0 + 12, y0 + 10), fit(d, q["symbol"], big, width // 2 - 12), font=big, fill=ui.FG)
-            d.text((x0 + 12, y0 + 36), price, font=small, fill=ui.MUTED)
+            d.text((tx, y0 + 10), fit(d, q["symbol"], big, x0 + width // 2 - tx), font=big, fill=ui.FG)
+            d.text((tx, y0 + 36), price, font=small, fill=ui.MUTED)
             d.text((x1 - 12, y0 + 10), change, font=big, fill=c, anchor="ra")
-            spark = (x0 + width // 2, y0 + 40, x1 - 12, y1 - 10)
+            spark = (x0 + width // 2 + 8, y0 + 40, x1 - 12, y1 - 10)
         else:  # one line: name, price next to it, chart, change on the right
             cy = (y0 + y1) // 2
-            name = fit(d, q["symbol"], big, int(width * 0.3))
-            d.text((x0 + 12, cy), name, font=big, fill=ui.FG, anchor="lm")
-            px = x0 + 12 + d.textlength(name, font=big) + 10
+            name = fit(d, q["symbol"], big, int(width * 0.28))
+            d.text((tx, cy), name, font=big, fill=ui.FG, anchor="lm")
+            px = tx + d.textlength(name, font=big) + 10
             d.text((px, cy), price, font=small, fill=ui.MUTED, anchor="lm")
             d.text((x1 - 12, cy), change, font=big, fill=c, anchor="rm")
             spark = (px + d.textlength(price, font=small) + 12, y0 + 10, x1 - cw - 24, y1 - 10)
@@ -657,7 +688,7 @@ def grid_shape(n, w, h, target=1.1):
     return best[1], best[2]
 
 
-def stock_card(d, box, q, radius):
+def stock_card(img, d, box, q, radius):
     """Symbol and change on top, price (and name when tall enough), then the day's chart."""
     x0, y0, x1, y1 = box
     w, h = x1 - x0, y1 - y0
@@ -669,8 +700,11 @@ def stock_card(d, box, q, radius):
     change = f"{q['change']:+.2f}%"
     cw = d.textlength(change, font=bold)
     y = y0 + pad
-    beside = d.textlength(q["symbol"], font=title) + cw + 3 * pad <= w  # else the change moves to the price row
-    d.text((x0 + pad, y), fit(d, q["symbol"], title, int(w - 2 * pad - (cw + pad if beside else 0))), font=title, fill=ui.FG)
+    icon = size + 4
+    symbol_icon(img, d, (x0 + pad, y - 2), icon, q)
+    tx = x0 + pad + icon + 6  # symbol after the icon
+    beside = tx - x0 + d.textlength(q["symbol"], font=title) + cw + 2 * pad <= w  # else the change moves to the price row
+    d.text((tx, y), fit(d, q["symbol"], title, int(x1 - pad - tx - (cw + pad if beside else 0))), font=title, fill=ui.FG)
     if beside:
         d.text((x1 - pad, y + size - bold.size), change, font=bold, fill=c, anchor="ra")
     y += size + 4
@@ -723,7 +757,7 @@ class Markets(Widget):
             in_row = min(cols, n - r * cols)
             shift = (cols - in_row) * (cw + gap) / 2  # centre an incomplete last row
             left, top = x0 + shift + c * (cw + gap), y0 + r * (ch + gap)
-            stock_card(d, (int(left), int(top), int(left + cw), int(top + ch)), q, radius)
+            stock_card(img, d, (int(left), int(top), int(left + cw), int(top + ch)), q, radius)
 
 
 @widget

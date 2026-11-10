@@ -133,6 +133,38 @@ class MascotImage(unittest.TestCase):
             self.assertIn(expected, {c for _n, c in img.getcolors(4096)}, agent)
 
 
+class MediaTransitions(unittest.TestCase):
+    def test_cover_follows_late_thumbnail_and_gap_is_held(self):
+        import io as _io
+        from sources import media
+
+        def png(color):
+            buf = _io.BytesIO()
+            Image.new("RGB", (4, 4), color).save(buf, "PNG")
+            return buf.getvalue()
+        old, new = png((255, 0, 0)), png((0, 0, 255))
+        media._cover.update(key=None, changed_at=0.0)
+        first = media.update_cover(("A", "x"), old, 0.0)
+        self.assertEqual(media._cover["changed_at"], 0.0)  # first song at start-up: not a skip
+        skipped = media.update_cover(("B", "y"), old, 10.0)   # Windows still serves the old thumbnail
+        self.assertIs(skipped, first)
+        late = media.update_cover(("B", "y"), new, 11.0)      # the real one arrives a second later
+        self.assertEqual(late.getpixel((0, 0)), (0, 0, 255))
+        self.assertIs(media.update_cover(("B", "y"), new, 12.0), late)  # same bytes: same object, caches stay valid
+        song = {"title": "B"}
+        self.assertIs(media.hold(song, 100.0), song)
+        self.assertIs(media.hold(None, 103.0), song)          # brief "nothing playing" between songs
+        self.assertIsNone(media.hold(None, 100.0 + media.GAP_HOLD + 1))
+
+
+    def test_position_runs_on_and_restarts_after_a_skip(self):
+        from sources.media import live_position
+        self.assertEqual(live_position(30, 1000, 200, True, 900, 1010), 40)    # 10 s played since the report
+        self.assertEqual(live_position(30, 1000, 200, False, 900, 1010), 30)   # paused: stays
+        self.assertEqual(live_position(180, 1000, 200, True, 1005, 1010), 5)   # report older than the skip: from 0
+        self.assertEqual(live_position(195, 1000, 200, True, 900, 1100), 200)  # never past the end
+
+
 class Calendar(unittest.TestCase):
     def test_recurring_events_are_expanded(self):
         now = datetime.now().astimezone()
