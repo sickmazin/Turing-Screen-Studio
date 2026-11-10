@@ -71,7 +71,7 @@ IT = {
     "max_agent_pages": "massimo pagine agente",
     "Choose stocks": "Scegli i titoli", "Choose stocks…": "Scegli titoli…", "Search": "Cerca", "All": "Tutte",
     "Symbol": "Simbolo", "Name": "Nome", "Category": "Categoria", "Add →": "Aggiungi →", "Add": "Aggiungi",
-    "Other Yahoo symbol:": "Altro simbolo Yahoo:", "Chosen": "Scelti", "Cancel": "Annulla",
+    "Other Yahoo symbol:": "Altro simbolo Yahoo:", "Chosen": "Scelti", "Cancel": "Annulla", "Symbol not found on Yahoo: ": "Simbolo non trovato su Yahoo: ",
     "With more than 5 stocks the page becomes a grid of cards.": "Con più di 5 titoli la pagina diventa una griglia di card.",
     "US stocks": "Azioni USA", "European stocks": "Azioni Europa", "Italian stocks": "Azioni Italia", "ETF": "ETF",
     "Indices": "Indici", "Commodities & FX": "Materie prime e valute", "Crypto": "Crypto",

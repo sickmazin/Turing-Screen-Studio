@@ -716,6 +716,8 @@ class Markets(Widget):
             return
         cols, rows = grid_shape(n, width, height)
         cw, ch = (width - gap * (cols - 1)) / cols, (height - gap * (rows - 1)) / rows
+        if cw < 24 or ch < 24:
+            return  # widget resized too small for cards
         for i, q in enumerate(quotes):
             r, c = divmod(i, cols)
             in_row = min(cols, n - r * cols)

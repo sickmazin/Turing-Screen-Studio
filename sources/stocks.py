@@ -29,6 +29,6 @@ def _get(symbol):
 
 
 async def fetch(cfg):
-    symbols = cfg.get("tickers") or settings["tickers"]
+    symbols = cfg.get("tickers", settings["tickers"])  # an emptied list stays empty
     results = await asyncio.gather(*(asyncio.to_thread(_get, s) for s in symbols), return_exceptions=True)
     return [r for r in results if not isinstance(r, Exception)]

@@ -1,6 +1,7 @@
 """Every bundled layout must render cleanly in both orientations with realistic data:
 no widget errors, every widget inside the screen, no truncated text."""
 import json
+import time
 import unittest
 from datetime import date, timedelta
 
@@ -134,6 +135,46 @@ class MarketsGrid(unittest.TestCase):
             # a grid leaves a vertical gap between the two card columns at the centre; the list does not
             column = {img.getpixel((148, y)) for y in range(60, 400)}
             self.assertEqual(len(column) == 1, n == 6, n)
+
+
+    def test_tiny_widget_draws_nothing_instead_of_failing(self):
+        from widgets import draw_all
+        errors = []
+        draw_all(Image.new("RGB", (100, 100)), [{"type": "markets", "x": 0, "y": 0, "w": 100, "h": 80}],
+                 {"stocks": sample_state()["stocks"] * 3}, on_error=lambda w, e: errors.append(e))
+        self.assertEqual(errors, [])
+
+    def test_emptied_list_stays_empty(self):
+        import asyncio
+        from sources import stocks
+        self.assertEqual(asyncio.run(stocks.fetch({"tickers": []})), [])  # no request, no defaults coming back
+
+
+class StockPickerCustomSymbol(unittest.TestCase):
+    def test_typo_is_refused_and_no_network_is_accepted(self):
+        import tkinter as tk
+        from unittest import mock
+        import requests
+        import stock_picker
+        root = tk.Tk()
+        root.geometry("10x10+0+0")
+        try:
+            picker = stock_picker.StockPicker(root, [], lambda chosen: None)
+            not_found = requests.HTTPError(response=mock.Mock(status_code=404))
+            for typed, error, expected in (("APPL", not_found, []), ("ENEL.MI", requests.ConnectionError(), ["ENEL.MI"])):
+                picker.custom.delete(0, "end")
+                picker.custom.insert(0, typed)
+                with mock.patch.object(stock_picker, "_get", side_effect=error),                         mock.patch.object(stock_picker.messagebox, "showwarning") as warn:
+                    picker.add_custom()
+                    for _i in range(300):  # let the check thread finish and post its result
+                        root.update()
+                        if warn.called or picker.chosen:
+                            break
+                        time.sleep(0.01)
+                self.assertEqual(picker.chosen, expected, typed)
+                self.assertEqual(warn.called, not expected, typed)
+        finally:
+            root.destroy()
 
 
 class AgentPages(unittest.TestCase):

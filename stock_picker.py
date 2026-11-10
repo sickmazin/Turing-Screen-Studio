@@ -1,8 +1,12 @@
 """Window to choose the Markets symbols: catalog with search and categories, chosen list in order, custom symbols."""
+import threading
 import tkinter as tk
-from tkinter import ttk
+from tkinter import messagebox, ttk
+
+import requests
 
 from i18n import _
+from sources.stocks import _get
 from stock_catalog import CATALOG, NAMES
 
 
@@ -103,8 +107,40 @@ class StockPicker(tk.Toplevel):
             self.add(symbol)
 
     def add_custom(self):
-        self.add(self.custom.get().strip().upper())
-        self.custom.delete(0, "end")
+        """Ask Yahoo once before adding a typed symbol: a typo would otherwise just never show up."""
+        symbol = self.custom.get().strip().upper()
+        if not symbol or symbol in self.chosen:
+            return
+        self.custom.configure(state="disabled")
+        result = []  # filled by the thread, read by the Tk thread (Tk calls from other threads are unreliable)
+
+        def work():
+            try:
+                _get(symbol)
+                found = True
+            except requests.HTTPError:  # Yahoo answers 404 for unknown symbols
+                found = False
+            except requests.RequestException:
+                found = True  # no network: cannot tell, keep what the user typed
+            except (KeyError, IndexError, TypeError):
+                found = False  # answered, but without data for that symbol
+            result.append(found)
+
+        def poll():
+            if not self.winfo_exists():
+                return
+            if not result:
+                self.after(50, poll)
+                return
+            found = result[0]
+            self.custom.configure(state="normal")
+            if found:
+                self.add(symbol)
+                self.custom.delete(0, "end")
+            else:
+                messagebox.showwarning(_("Choose stocks"), _("Symbol not found on Yahoo: ") + symbol, parent=self)
+        threading.Thread(target=work, daemon=True).start()
+        self.after(50, poll)
 
     def move(self, step):
         sel = self.list.curselection()
