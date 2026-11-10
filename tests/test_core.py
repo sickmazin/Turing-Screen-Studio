@@ -165,6 +165,26 @@ class MediaTransitions(unittest.TestCase):
         self.assertEqual(live_position(195, 1000, 200, True, 900, 1100), 200)  # never past the end
 
 
+class Logos(unittest.TestCase):
+    def test_sources_per_kind_of_symbol(self):
+        import logos
+        self.assertTrue(logos.urls("AAPL")[0].endswith("ticker_icons/AAPL.png"))  # US: the transparent repo first
+        self.assertTrue(logos.urls("BRK-B")[0].endswith("ticker_icons/BRKA.png"))
+        self.assertEqual(len(logos.urls("ENI.MI")), 1)                          # European listing: only the fallback
+        self.assertTrue(logos.urls("BTC-USD")[0].endswith("crypto_icons/BTC.png"))
+        self.assertTrue(logos.urls("EURUSD=X")[0].endswith("forex_icons/EURUSD.png"))
+        self.assertEqual((logos.urls("GC=F"), logos.urls("^GSPC")), ([], []))   # emoji / country badge instead
+
+    def test_only_transparent_grey_logos_are_recoloured(self):
+        import logos
+        black = Image.new("RGBA", (10, 10), (0, 0, 0, 0))
+        black.paste((10, 10, 10, 255), (2, 2, 8, 8))
+        red = black.copy()
+        red.paste((220, 30, 30, 255), (2, 2, 8, 8))
+        opaque = Image.new("RGBA", (10, 10), (0, 0, 0, 255))
+        self.assertEqual([logos.is_monochrome(i) for i in (black, red, opaque)], [True, False, False])
+
+
 class Calendar(unittest.TestCase):
     def test_recurring_events_are_expanded(self):
         now = datetime.now().astimezone()

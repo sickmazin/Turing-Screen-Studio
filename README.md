@@ -38,10 +38,12 @@ Close `UsbMonitor.exe` first: only one program can use the screen. CPU temperatu
 
 ```powershell
 .venv\Scripts\pip install -r requirements-dev.txt
-.venv\Scripts\pyinstaller TuringScreenStudio.spec --noconfirm
+.venv\Scripts\python tools\build.py
 ```
 
 Output: `dist\TuringScreenStudio\TuringScreenStudio.exe` (one folder, asks for administrator rights).
+`tools\build.py` builds into `build\fresh` and swaps `dist` only when no TuringScreenStudio.exe is using it
+(running PyInstaller straight into `dist` with the app open leaves it half-deleted).
 `TuringScreenStudio.exe --settings` opens the settings window.
 
 ## Where things are

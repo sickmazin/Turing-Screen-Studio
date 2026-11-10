@@ -611,12 +611,19 @@ class Play(Widget):
             d.polygon([(x0, y0), (x1, (y0 + y1) / 2), (x0, y1)], fill=c)
 
 
-def _logo_tile(logo, size):
-    """Logo on a white rounded square, like an app icon: dark logos stay visible on dark cards."""
-    tile = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    ImageDraw.Draw(tile).rounded_rectangle((0, 0, size - 1, size - 1), max(3, size // 5), fill=(255, 255, 255, 255))
+def _logo_tile(logo, size, fg):
+    """Logo fitted in a size x size square, no background: monochrome logos take the theme's text colour,
+    logos with their own opaque background get rounded corners."""
+    import logos
     inner = logo.copy()
-    inner.thumbnail((int(size * 0.78), int(size * 0.78)), Image.Resampling.LANCZOS)
+    inner.thumbnail((size, size), Image.Resampling.LANCZOS)
+    if logos.is_monochrome(inner):
+        inner = Image.merge("RGBA", (*Image.new("RGB", inner.size, fg).split(), inner.getchannel("A")))
+    elif inner.getchannel("A").getextrema()[0] > 250:
+        mask = Image.new("L", inner.size, 0)
+        ImageDraw.Draw(mask).rounded_rectangle((0, 0, inner.width - 1, inner.height - 1), max(3, size // 5), fill=255)
+        inner.putalpha(mask)
+    tile = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     tile.alpha_composite(inner, ((size - inner.width) // 2, (size - inner.height) // 2))
     return tile
 
@@ -626,7 +633,7 @@ def symbol_icon(img, d, xy, size, q):
     import logos
     x, y = int(xy[0]), int(xy[1])
     if q.get("logo") is not None:
-        tile = _memo(_logo_tile, q["logo"], size)
+        tile = _memo(_logo_tile, q["logo"], size, ui.FG)
         img.paste(tile, (x, y), tile)
         return
     emoji = logos.EMOJI.get(q["symbol"])
