@@ -3,8 +3,6 @@
 Protocol: 6-byte commands with four 10-bit coordinates, then raw RGB565 little-endian pixels.
 Verified on real hardware: a full frame takes ~2 s, a small rectangle ~40 ms.
 """
-import time
-
 import serial
 from PIL import Image
 from serial.tools.list_ports import comports

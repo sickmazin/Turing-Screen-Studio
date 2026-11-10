@@ -53,6 +53,9 @@ class Settings(tk.Tk):
         self.history_view = {}
         self._jobs = {}
         ui.load_theme(self.cfg.get("theme", "dark"))
+        from main import tray_icon_image
+        self._icon = ImageTk.PhotoImage(tray_icon_image())
+        self.iconphoto(True, self._icon)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         self.build_ui()
         threading.Thread(target=self.fetch_data, daemon=True).start()

@@ -9,6 +9,7 @@ Data:
 """
 import asyncio
 import ctypes
+import logging
 import threading
 
 import paths
@@ -42,6 +43,9 @@ def _open():
         _computer = c
     except Exception as e:  # library missing or .NET not available: report once, do not retry every 2 s
         _error = repr(e)
+        logging.getLogger("studio").warning("hardware sensors unavailable: %s", _error)
+    else:
+        logging.getLogger("studio").info("hardware sensors ready (administrator: %s)", is_admin())
     return _computer
 
 
