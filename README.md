@@ -83,6 +83,10 @@ animation runs at ~3–4 fps).
 
 - [ ] **Page rules**: show a page when a condition holds (e.g. Claude page while a session is working,
       weather only in the morning, lower brightness in the evening, media page only while playing).
+- [ ] **Tablet / smartphone as a screen**: a network display backend next to `screen.py` (local web server,
+      frames pushed over WebSocket to a browser page, no app to install), chosen in the settings; layouts
+      rendered with a scale factor for the device resolution; swipe to change page; optionally USB screen and
+      tablet together. No USB bandwidth limit, so animations could run at 20–30 fps.
 - [ ] Temperature of disks and fan curves on the hardware page (sensors are already in `hardware.sensors`).
 - [ ] Installer (Inno Setup) on top of the PyInstaller folder.
 - [ ] More languages.
