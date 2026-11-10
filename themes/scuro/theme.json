@@ -1,0 +1,20 @@
+{
+  "name": "Scuro",
+  "colors": {
+    "bg": "#0c0e14",
+    "card": "#1c202c",
+    "fg": "#ebeef5",
+    "muted": "#8c94a5",
+    "accent": "#6eaaff",
+    "good": "#50d282",
+    "warn": "#fabe46",
+    "bad": "#f05a5a"
+  },
+  "font": {
+    "regular": "segoeui.ttf",
+    "bold": "segoeuib.ttf",
+    "scale": 1.0
+  },
+  "backgrounds": {},
+  "background_dim": 0.55
+}

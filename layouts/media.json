@@ -1,0 +1,209 @@
+{
+ "name": "Media",
+ "portrait": [
+  {
+   "type": "backdrop",
+   "x": 0,
+   "y": 0,
+   "w": 320,
+   "h": 480,
+   "blur": 18,
+   "dim": 0.55
+  },
+  {
+   "type": "cover",
+   "x": 24,
+   "y": 20,
+   "w": 272,
+   "h": 272,
+   "radius": 20
+  },
+  {
+   "type": "text",
+   "x": 16,
+   "y": 306,
+   "w": 288,
+   "h": 38,
+   "text": "{media.title}",
+   "size": 26,
+   "bold": true,
+   "color": "fg",
+   "align": "center",
+   "fallback": "Niente in riproduzione"
+  },
+  {
+   "type": "text",
+   "x": 16,
+   "y": 346,
+   "w": 288,
+   "h": 30,
+   "text": "{media.artist}",
+   "size": 20,
+   "bold": false,
+   "color": "muted",
+   "align": "center",
+   "fallback": ""
+  },
+  {
+   "type": "text",
+   "x": 16,
+   "y": 376,
+   "w": 288,
+   "h": 22,
+   "text": "{media.album}",
+   "size": 14,
+   "bold": false,
+   "color": "muted",
+   "align": "center",
+   "fallback": ""
+  },
+  {
+   "type": "bar",
+   "x": 48,
+   "y": 440,
+   "w": 224,
+   "h": 3,
+   "field": "media.position",
+   "max": "media.duration",
+   "color": "fg",
+   "bg": "muted"
+  },
+  {
+   "type": "text",
+   "x": 48,
+   "y": 446,
+   "w": 50,
+   "h": 14,
+   "text": "{media.position:mmss}",
+   "size": 11,
+   "bold": false,
+   "color": "muted",
+   "align": "left",
+   "fallback": ""
+  },
+  {
+   "type": "text",
+   "x": 222,
+   "y": 446,
+   "w": 50,
+   "h": 14,
+   "text": "{media.duration:mmss}",
+   "size": 11,
+   "bold": false,
+   "color": "muted",
+   "align": "right",
+   "fallback": ""
+  },
+  {
+   "type": "play",
+   "x": 155,
+   "y": 448,
+   "w": 10,
+   "h": 10,
+   "color": "muted"
+  }
+ ],
+ "landscape": [
+  {
+   "type": "backdrop",
+   "x": 0,
+   "y": 0,
+   "w": 480,
+   "h": 320,
+   "blur": 18,
+   "dim": 0.55
+  },
+  {
+   "type": "cover",
+   "x": 16,
+   "y": 16,
+   "w": 288,
+   "h": 288,
+   "radius": 20
+  },
+  {
+   "type": "text",
+   "x": 320,
+   "y": 96,
+   "w": 148,
+   "h": 40,
+   "text": "{media.title}",
+   "size": 24,
+   "bold": true,
+   "color": "fg",
+   "align": "left",
+   "fallback": "Niente in riproduzione"
+  },
+  {
+   "type": "text",
+   "x": 320,
+   "y": 138,
+   "w": 148,
+   "h": 30,
+   "text": "{media.artist}",
+   "size": 19,
+   "bold": false,
+   "color": "muted",
+   "align": "left",
+   "fallback": ""
+  },
+  {
+   "type": "text",
+   "x": 320,
+   "y": 168,
+   "w": 148,
+   "h": 22,
+   "text": "{media.album}",
+   "size": 14,
+   "bold": false,
+   "color": "muted",
+   "align": "left",
+   "fallback": ""
+  },
+  {
+   "type": "bar",
+   "x": 320,
+   "y": 278,
+   "w": 144,
+   "h": 3,
+   "field": "media.position",
+   "max": "media.duration",
+   "color": "fg",
+   "bg": "muted"
+  },
+  {
+   "type": "text",
+   "x": 320,
+   "y": 284,
+   "w": 50,
+   "h": 14,
+   "text": "{media.position:mmss}",
+   "size": 11,
+   "bold": false,
+   "color": "muted",
+   "align": "left",
+   "fallback": ""
+  },
+  {
+   "type": "text",
+   "x": 414,
+   "y": 284,
+   "w": 50,
+   "h": 14,
+   "text": "{media.duration:mmss}",
+   "size": 11,
+   "bold": false,
+   "color": "muted",
+   "align": "right",
+   "fallback": ""
+  },
+  {
+   "type": "play",
+   "x": 387,
+   "y": 286,
+   "w": 10,
+   "h": 10,
+   "color": "muted"
+  }
+ ]
+}

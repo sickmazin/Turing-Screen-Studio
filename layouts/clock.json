@@ -1,0 +1,85 @@
+{
+ "name": "Orologio",
+ "portrait": [
+  {
+   "type": "text",
+   "x": 0,
+   "y": 150,
+   "w": 320,
+   "h": 110,
+   "text": "{now:%H:%M}",
+   "size": 96,
+   "bold": true,
+   "color": "fg",
+   "align": "center",
+   "fallback": ""
+  },
+  {
+   "type": "text",
+   "x": 0,
+   "y": 252,
+   "w": 320,
+   "h": 40,
+   "text": "{now:%S}",
+   "size": 28,
+   "bold": false,
+   "color": "accent",
+   "align": "center",
+   "fallback": ""
+  },
+  {
+   "type": "text",
+   "x": 0,
+   "y": 300,
+   "w": 320,
+   "h": 40,
+   "text": "{date.weekday} {date.day} {date.month}",
+   "size": 22,
+   "bold": false,
+   "color": "muted",
+   "align": "center",
+   "fallback": ""
+  }
+ ],
+ "landscape": [
+  {
+   "type": "text",
+   "x": 0,
+   "y": 16,
+   "w": 480,
+   "h": 140,
+   "text": "{now:%H:%M}",
+   "size": 120,
+   "bold": true,
+   "color": "fg",
+   "align": "center",
+   "fallback": ""
+  },
+  {
+   "type": "text",
+   "x": 0,
+   "y": 144,
+   "w": 480,
+   "h": 36,
+   "text": "{now:%S}",
+   "size": 26,
+   "bold": false,
+   "color": "accent",
+   "align": "center",
+   "fallback": ""
+  },
+  {
+   "type": "text",
+   "x": 0,
+   "y": 240,
+   "w": 480,
+   "h": 40,
+   "text": "{date.weekday} {date.day} {date.month}",
+   "size": 24,
+   "bold": false,
+   "color": "muted",
+   "align": "center",
+   "fallback": ""
+  }
+ ]
+}

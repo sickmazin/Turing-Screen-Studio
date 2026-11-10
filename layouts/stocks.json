@@ -1,0 +1,123 @@
+{
+ "name": "Mercati",
+ "portrait": [
+  {
+   "type": "text",
+   "x": 16,
+   "y": 4,
+   "w": 288,
+   "h": 24,
+   "text": "MERCATI",
+   "size": 15,
+   "bold": true,
+   "color": "muted",
+   "align": "left",
+   "fallback": ""
+  },
+  {
+   "type": "ticker",
+   "x": 12,
+   "y": 40,
+   "w": 296,
+   "h": 79,
+   "index": 0,
+   "radius": 10
+  },
+  {
+   "type": "ticker",
+   "x": 12,
+   "y": 127,
+   "w": 296,
+   "h": 79,
+   "index": 1,
+   "radius": 10
+  },
+  {
+   "type": "ticker",
+   "x": 12,
+   "y": 214,
+   "w": 296,
+   "h": 79,
+   "index": 2,
+   "radius": 10
+  },
+  {
+   "type": "ticker",
+   "x": 12,
+   "y": 301,
+   "w": 296,
+   "h": 79,
+   "index": 3,
+   "radius": 10
+  },
+  {
+   "type": "ticker",
+   "x": 12,
+   "y": 388,
+   "w": 296,
+   "h": 79,
+   "index": 4,
+   "radius": 10
+  }
+ ],
+ "landscape": [
+  {
+   "type": "text",
+   "x": 16,
+   "y": 4,
+   "w": 448,
+   "h": 24,
+   "text": "MERCATI",
+   "size": 15,
+   "bold": true,
+   "color": "muted",
+   "align": "left",
+   "fallback": ""
+  },
+  {
+   "type": "ticker",
+   "x": 12,
+   "y": 36,
+   "w": 456,
+   "h": 50,
+   "index": 0,
+   "radius": 10
+  },
+  {
+   "type": "ticker",
+   "x": 12,
+   "y": 92,
+   "w": 456,
+   "h": 50,
+   "index": 1,
+   "radius": 10
+  },
+  {
+   "type": "ticker",
+   "x": 12,
+   "y": 148,
+   "w": 456,
+   "h": 50,
+   "index": 2,
+   "radius": 10
+  },
+  {
+   "type": "ticker",
+   "x": 12,
+   "y": 204,
+   "w": 456,
+   "h": 50,
+   "index": 3,
+   "radius": 10
+  },
+  {
+   "type": "ticker",
+   "x": 12,
+   "y": 260,
+   "w": 456,
+   "h": 50,
+   "index": 4,
+   "radius": 10
+  }
+ ]
+}

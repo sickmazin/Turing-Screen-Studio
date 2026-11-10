@@ -1,0 +1,20 @@
+{
+  "name": "Chiaro",
+  "colors": {
+    "bg": "#f2f4f8",
+    "card": "#dde2ec",
+    "fg": "#151821",
+    "muted": "#5d6575",
+    "accent": "#2f6fe0",
+    "good": "#1f9d55",
+    "warn": "#c77f00",
+    "bad": "#d63b3b"
+  },
+  "font": {
+    "regular": "segoeui.ttf",
+    "bold": "segoeuib.ttf",
+    "scale": 1.0
+  },
+  "backgrounds": {},
+  "background_dim": 0.55
+}

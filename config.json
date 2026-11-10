@@ -1,0 +1,37 @@
+{
+  "port": "AUTO",
+  "orientation": "reverse_landscape",
+  "brightness": 40,
+  "theme": "scuro",
+  "rotate_seconds": 0,
+  "media_focus": true,
+  "off_when_locked": true,
+  "key_next": "ctrl+shift+right",
+  "key_prev": "ctrl+shift+left",
+  "pages": [
+    "clock",
+    "system",
+    "media",
+    "claude",
+    "weather",
+    "stocks"
+  ],
+  "weather": {
+    "city": "Milano",
+    "lat": 45.46,
+    "lon": 9.19
+  },
+  "stocks": {
+    "tickers": [
+      "AAPL",
+      "NVDA",
+      "MSFT",
+      "BTC-USD",
+      "^GSPC"
+    ]
+  },
+  "claude": {
+    "active_minutes": 30,
+    "context_window": 200000
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "Neon",
+  "colors": {
+    "bg": "#07040f",
+    "card": "#1a1030",
+    "fg": "#f4ecff",
+    "muted": "#9a86c4",
+    "accent": "#ff3df2",
+    "good": "#39ff9a",
+    "warn": "#ffd23d",
+    "bad": "#ff4d6d"
+  },
+  "font": {
+    "regular": "bahnschrift.ttf",
+    "bold": "bahnschrift.ttf",
+    "scale": 1.0
+  },
+  "backgrounds": {},
+  "background_dim": 0.55
+}

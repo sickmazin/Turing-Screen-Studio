@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+*.log
+*.log.*
+*.pid
+stop.flag
+control.json
+preview/
+build/
+dist/
+vendor/
+*.spec.bak

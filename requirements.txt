@@ -1,0 +1,7 @@
+pyserial
+pillow
+psutil
+winsdk
+requests
+keyboard
+pystray
