@@ -8,6 +8,8 @@ import json
 import time
 from pathlib import Path
 
+import psutil
+
 import paths
 
 name = "claude"
@@ -15,6 +17,7 @@ settings = {"active_minutes": 30, "context_window": 200000}  # defaults, editabl
 interval = 3
 
 PROJECTS = Path.home() / ".claude" / "projects"
+SESSIONS = Path.home() / ".claude" / "sessions"
 _cache = {}  # path -> (mtime, result): a transcript is parsed again only when it changes
 
 
@@ -73,13 +76,33 @@ def merge_statusline(s: dict, window_default: int):
     s["rate_limits"] = d.get("rate_limits")
 
 
+def live_sessions():
+    """sessionId -> status ("busy", ...) of Claude Code processes still running, from ~/.claude/sessions/<pid>.json.
+
+    None when that folder does not exist (older Claude Code): callers fall back to "recently written"."""
+    if not SESSIONS.is_dir():
+        return None
+    out = {}
+    for f in SESSIONS.glob("*.json"):
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+            if d.get("sessionId") and "claude" in psutil.Process(int(d["pid"])).name().lower():  # pid not reused
+                out[d["sessionId"]] = d.get("status", "")
+        except (OSError, ValueError, KeyError, psutil.Error):
+            continue  # stale file of a closed session
+    return out
+
+
 def collect(cfg):
     now = time.time()
     active = cfg.get("active_minutes", 30) * 60
+    live = live_sessions()
     out = []
     for p in PROJECTS.glob("*/*.jsonl"):
+        if live is not None and p.stem not in live:
+            continue  # session closed (or a subagent transcript)
         mtime = p.stat().st_mtime
-        if now - mtime > active:
+        if live is None and now - mtime > active:
             continue
         hit = _cache.get(p)
         if not hit or hit[0] != mtime:
@@ -92,7 +115,8 @@ def collect(cfg):
         merge_statusline(s, window if s["context"] <= window else 1_000_000)
         s.setdefault("context_pct", s["context"] / s["window"] * 100)
         s["model_name"] = s.get("model_name") or s["model"]
-        s["busy"] = s["age"] < 20  # written to in the last seconds = working
+        # Claude Code's own status when known, else "written to in the last seconds"
+        s["busy"] = live[p.stem] == "busy" if live and live.get(p.stem) else s["age"] < 20
         out.append(s)
     out.sort(key=lambda s: s["age"])
     return out

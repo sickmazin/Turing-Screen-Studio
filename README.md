@@ -70,8 +70,10 @@ Widget texts use `{path:format}`: `{system.cpu:.0f}%`, `{hardware.gpu.temp:.0f}Â
 Cost, real context size and plan limits come from Claude Code's status line. In `~/.claude/settings.json`:
 
 ```json
-"statusLine": {"type": "command", "command": "<path>\\.venv\\Scripts\\python.exe <path>\\claude_statusline.py"}
+"statusLine": {"type": "command", "command": "C:/<path>/.venv/Scripts/python.exe C:/<path>/claude_statusline.py"}
 ```
+
+Use forward slashes: on Windows Claude Code runs the command through Git Bash, where backslashes are escapes.
 
 ## Performance notes
 

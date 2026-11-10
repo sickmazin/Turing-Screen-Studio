@@ -75,6 +75,30 @@ class Transcripts(unittest.TestCase):
         self.assertEqual((s["project"], s["model"], s["context"]), ("proj", "gemini-3", 800))
 
 
+class Liveness(unittest.TestCase):
+    def test_keeps_newest_sessions_per_running_process(self):
+        from collections import Counter
+        sessions = [{"cwd": "C:/Work/A", "age": 5, "id": 1}, {"cwd": "c:/work/a", "age": 1, "id": 2},
+                    {"cwd": "C:/Work/A", "age": 9, "id": 3}, {"cwd": "C:/Work/B", "age": 2, "id": 4}]
+        import os
+        kept = list(agents.keep_live(sessions, Counter({os.path.normcase("C:/Work/A"): 2})))
+        self.assertEqual([x["id"] for x in kept], [2, 1])  # two processes in A, none in B
+
+    def test_closed_or_reused_pids_are_not_live(self):
+        import os
+        d = Path(tempfile.mkdtemp())
+        (d / "1.json").write_text(json.dumps({"pid": 999_999_9, "sessionId": "gone"}), encoding="utf-8")
+        (d / "2.json").write_text(json.dumps({"pid": os.getpid(), "sessionId": "python-not-claude"}), encoding="utf-8")
+        (d / "3.json").write_text("not json", encoding="utf-8")
+        old, claude.SESSIONS = claude.SESSIONS, d
+        try:
+            self.assertEqual(claude.live_sessions(), {})
+            claude.SESSIONS = d / "missing"
+            self.assertIsNone(claude.live_sessions())  # older Claude Code: fall back to recent files
+        finally:
+            claude.SESSIONS = old
+
+
 class Calendar(unittest.TestCase):
     def test_recurring_events_are_expanded(self):
         now = datetime.now().astimezone()

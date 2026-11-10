@@ -762,6 +762,8 @@ class Mascot(Widget):
     def draw(cls, img, d, box, w, state):
         x0, y0, x1, y1 = box
         agent = get(state, cls.p(w, "agent"))
+        if agent is None:
+            return  # no session open: no mascot
         busy = bool(get(state, cls.p(w, "busy")))
         spec = str(cls.p(w, "color"))
         body = AGENT_COLORS.get(agent, CLAUDE_ORANGE) if spec in ("", "auto") else color(spec)

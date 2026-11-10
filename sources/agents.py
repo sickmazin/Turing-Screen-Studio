@@ -10,8 +10,12 @@ Formats checked against real files:
 """
 import asyncio
 import json
+import os
 import time
+from collections import Counter
 from pathlib import Path
+
+import psutil
 
 from sources import claude
 
@@ -52,7 +56,7 @@ def parse_codex(path: Path) -> dict:
             p = e.get("payload") or {}
             kind = p.get("type")
             if e.get("type") == "session_meta" and p.get("cwd"):
-                s["project"] = Path(p["cwd"]).name
+                s["project"], s["cwd"] = Path(p["cwd"]).name, p["cwd"]
             elif e.get("type") == "turn_context" and p.get("model"):
                 s["model"] = p["model"]
             elif kind == "task_started":
@@ -78,7 +82,8 @@ def parse_gemini(path: Path) -> dict:
          "output_tokens": 0, "turns": 0, "limits": []}
     root = path.parent.parent / ".project_root"
     if root.exists():
-        s["project"] = Path(root.read_text(encoding="utf-8").strip()).name or s["project"]
+        s["cwd"] = root.read_text(encoding="utf-8").strip()
+        s["project"] = Path(s["cwd"]).name or s["project"]
     messages = {}
     with path.open(encoding="utf-8", errors="replace") as f:
         for line in f:
@@ -110,16 +115,51 @@ def from_claude(c: dict) -> dict:
             "limits": limits}
 
 
+def live_cwds():
+    """Working folders of running Codex / Gemini CLI processes, counted once per session (not per child process)."""
+    found = {}
+    for p in psutil.process_iter(["name", "cmdline", "ppid"]):
+        name = (p.info["name"] or "").lower()
+        args = " ".join(p.info["cmdline"] or []).lower().replace("\\", "/") if name.startswith("node") else ""
+        agent = ("Codex" if name.startswith("codex") or "@openai/codex" in args else
+                 "Gemini" if name.startswith("gemini") or "gemini-cli" in args else None)
+        if agent:
+            try:
+                found[p.pid] = (agent, os.path.normcase(p.cwd()), p.info["ppid"])
+            except psutil.Error:
+                pass
+    out = {"Codex": Counter(), "Gemini": Counter()}
+    for agent, cwd, ppid in found.values():
+        if ppid not in found:  # the npm "node" launcher and its native child are one session
+            out[agent][cwd] += 1
+    return out
+
+
+def keep_live(sessions, counts):
+    """Newest sessions first; keep as many per folder as there are processes running in it."""
+    left = Counter(counts)
+    for s in sorted(sessions, key=lambda s: s["age"]):
+        cwd = os.path.normcase(s.get("cwd") or "")
+        if left[cwd] > 0:
+            left[cwd] -= 1
+            yield s
+
+
 def collect(cfg):
     now = time.time()
     minutes = cfg.get("active_minutes", 30)
-    out = [from_claude(c) for c in claude.collect({"active_minutes": minutes})]
-    for files, parse, window in ((CODEX.glob("*/*/*/*.jsonl"), parse_codex, 0),
-                                 (GEMINI.glob("*/chats/*.jsonl"), parse_gemini, cfg.get("gemini_context_window", 1_000_000))):
+    out = [from_claude(c) for c in claude.collect({**claude.settings, **cfg.get("claude", {}), "active_minutes": minutes})]
+    live = live_cwds()
+    for agent, files, parse, window in (("Codex", CODEX.glob("*/*/*/*.jsonl"), parse_codex, 0),
+                                        ("Gemini", GEMINI.glob("*/chats/*.jsonl"), parse_gemini,
+                                         cfg.get("gemini_context_window", 1_000_000))):
+        if not live[agent]:
+            continue  # no process running: nothing to show (and no files to parse)
+        found = []
         for p in files:
             age = now - p.stat().st_mtime
-            if age > minutes * 60:
-                continue
+            if age > 7 * 86400:
+                continue  # an open session has written in the last week; skips parsing the whole history
             s = dict(_cached(p, parse), age=age, session_id=p.stem)
             if not (s["model"] or s["context"]):
                 continue
@@ -127,7 +167,8 @@ def collect(cfg):
             s["context_pct"] = s["context"] / s["window"] * 100
             s["busy"] = s.pop("working", False) and age < 600 or age < 20
             s.setdefault("cost", None)
-            out.append(s)
+            found.append(s)
+        out.extend(keep_live(found, live[agent]))
     for s in out:
         s["key"] = f"{s['agent']}:{s['session_id']}"
         s["title"] = TITLES.get(s["agent"], s["agent"].upper())
