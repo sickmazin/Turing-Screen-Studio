@@ -188,6 +188,9 @@ class AgentPages(unittest.TestCase):
         self.assertEqual(view[2].session(state)["agent"], "Codex")
         self.assertEqual([p.name for p in layout.expand_pages([page], {})], ["claude"])
         self.assertEqual(len(layout.expand_pages([page], state, limit=1)), 1)
+        media = layout.LayoutPage("media", {"portrait": []})
+        self.assertEqual([p.name for p in layout.expand_pages([clock, page, media], {})], ["clock"])
+        self.assertIn("media", [p.name for p in layout.expand_pages([clock, media], {"media": {"title": "x"}})])
 
     def test_page_follows_its_session_when_the_list_reorders(self):
         page = layout.LayoutPage("claude", json.loads((DEFAULTS / "claude.json").read_text(encoding="utf-8")))

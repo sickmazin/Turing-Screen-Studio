@@ -57,7 +57,7 @@ IT = {
     "Landscape (upside down)": "Orizzontale capovolto", "Brightness": "Luminosità",
     "Automatic page change (s, 0 = never)": "Cambio pagina automatico (s, 0 = mai)",
     "Animation frames per second": "Fotogrammi al secondo delle animazioni",
-    "Switch to the media page when a song starts": "Passa alla pagina media quando parte un brano",
+    "Night brightness": "Luminosità notturna", "from": "dalle", "to": "alle",
     "Turn the screen off when the PC is locked": "Spegni lo schermo quando il PC è bloccato",
     "Record…": "Registra…", "Press the keys…": "Premi i tasti…", "Default": "Predefinita", "Shortcut": "Scorciatoia",
     "Record: press the button, then the key combination (Esc cancels).":

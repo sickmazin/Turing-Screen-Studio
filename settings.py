@@ -3,6 +3,7 @@
 Run: pythonw settings.py  (or from the tray: Settings; frozen: TuringScreenStudio.exe --settings)
 """
 import asyncio
+import datetime
 import json
 import os
 import shutil
@@ -39,6 +40,15 @@ SOURCE_LABELS = {"weather": "Weather", "stocks": "Markets", "claude": "Claude Co
 FONTS_DIR = Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts"
 IMAGE_TYPES = [("Images", "*.png *.jpg *.jpeg *.bmp *.webp")]
 FONT_TYPES = [("Fonts", "*.ttf *.otf *.ttc")]
+
+
+def valid_time(text: str) -> bool:
+    """HH:MM as the screen app reads it (datetime.time.fromisoformat)."""
+    try:
+        datetime.time.fromisoformat(text)
+        return len(text) == 5
+    except ValueError:
+        return False
 
 
 class Settings(tk.Tk):
@@ -161,6 +171,22 @@ class Settings(tk.Tk):
         ttk.Label(box, textvariable=bright, width=4).pack(side="left", padx=8)
         bright.trace_add("write", lambda *a: self.set("brightness", bright.get()))
 
+        night = tk.BooleanVar(value=self.cfg.get("night_enabled", False))
+        ttk.Checkbutton(f, text=_("Night brightness"), variable=night).grid(row=row, column=0, sticky="w", pady=6)
+        night.trace_add("write", lambda *a: self.set("night_enabled", night.get()))
+        box = ttk.Frame(f)
+        box.grid(row=row, column=1, sticky="w")
+        row += 1
+        for key, text, default in (("night_from", "from", "22:00"), ("night_to", "to", "07:00")):
+            ttk.Label(box, text=_(text)).pack(side="left", padx=(0, 4))
+            var = tk.StringVar(value=self.cfg.get(key, default))
+            ttk.Entry(box, textvariable=var, width=6).pack(side="left", padx=(0, 10))
+            var.trace_add("write", lambda *a, k=key, v=var: valid_time(v.get()) and self.set(k, v.get()))
+        nb = tk.StringVar(value=str(self.cfg.get("night_brightness", 10)))
+        ttk.Spinbox(box, from_=0, to=100, increment=5, textvariable=nb, width=5).pack(side="left")
+        ttk.Label(box, text="%").pack(side="left", padx=(2, 0))
+        nb.trace_add("write", lambda *a: nb.get().isdigit() and self.set("night_brightness", min(100, int(nb.get()))))
+
         for key, text, default, lo, hi in (("rotate_seconds", "Automatic page change (s, 0 = never)", 0, 0, 3600),
                                            ("animation_fps", "Animation frames per second", 8, 1, 15)):
             r = label(text)
@@ -169,8 +195,7 @@ class Settings(tk.Tk):
             var.trace_add("write", lambda *a, k=key, v=var, lo=lo, hi=hi: v.get().isdigit()
                           and self.set(k, max(lo, min(hi, int(v.get())))))
 
-        for key, text in (("media_focus", "Switch to the media page when a song starts"),
-                          ("off_when_locked", "Turn the screen off when the PC is locked")):
+        for key, text in (("off_when_locked", "Turn the screen off when the PC is locked"),):
             var = tk.BooleanVar(value=self.cfg.get(key, True))
             ttk.Checkbutton(f, text=_(text), variable=var).grid(row=row, column=0, columnspan=2, sticky="w", pady=4)
             var.trace_add("write", lambda *a, k=key, v=var: self.set(k, v.get()))

@@ -34,6 +34,17 @@ def write_jsonl(lines):
     return p
 
 
+class NightBrightness(unittest.TestCase):
+    def test_range_crossing_midnight(self):
+        from datetime import time
+        from main import scheduled_brightness
+        cfg = {"brightness": 60, "night_enabled": True, "night_from": "22:00", "night_to": "07:00", "night_brightness": 5}
+        self.assertEqual([scheduled_brightness(cfg, time(h)) for h in (21, 22, 3, 7)], [60, 5, 5, 60])
+        self.assertEqual(scheduled_brightness({**cfg, "night_from": "13:00", "night_to": "15:00"}, time(14)), 5)
+        self.assertEqual(scheduled_brightness({**cfg, "night_enabled": False}, time(3)), 60)
+        self.assertEqual(scheduled_brightness({**cfg, "night_to": "7"}, time(3)), 60)  # bad time: day value
+
+
 class Transcripts(unittest.TestCase):
     def test_claude_counts_once_and_skips_subagents(self):
         usage = {"input_tokens": 10, "cache_read_input_tokens": 1000, "cache_creation_input_tokens": 90, "output_tokens": 50}

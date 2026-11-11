@@ -11,7 +11,9 @@ import logging
 import os
 import pkgutil
 import sys
+import threading
 import time
+from datetime import datetime, time as dtime
 from logging.handlers import RotatingFileHandler
 
 import keyboard
@@ -64,6 +66,19 @@ def is_locked() -> bool:
         user32.CloseDesktop(h)
 
 
+def scheduled_brightness(cfg: dict, now: dtime) -> int:
+    """'brightness' by day, 'night_brightness' from night_from to night_to (the range may cross midnight)."""
+    day = cfg.get("brightness", 40)
+    if not cfg.get("night_enabled"):
+        return day
+    try:
+        start, end = dtime.fromisoformat(cfg.get("night_from", "22:00")), dtime.fromisoformat(cfg.get("night_to", "07:00"))
+    except (TypeError, ValueError):
+        return day
+    night = start <= now < end if start <= end else (now >= start or now < end)
+    return cfg.get("night_brightness", 10) if night else day
+
+
 def _mtime(p):
     try:
         return p.stat().st_mtime
@@ -83,8 +98,10 @@ class App:
         self.screen = Screen()
         self.idx = 0
         self.last_switch = time.monotonic()
-        self.was_playing = False
+        self.stopped = threading.Event()  # set once the screen has been switched off on quit
         self.screen_off = False
+        self.suspended = False  # set by the tray window when Windows goes to sleep
+        self.slept = threading.Event()  # set once the screen has been switched off for sleep
         self.running = True
         self.stamp = None
         self.prev = None
@@ -141,17 +158,11 @@ class App:
             self.tasks[n] = asyncio.create_task(self.poll(n))
 
         s = self.screen
-        port, orient, bright = cfg.get("port", "AUTO"), cfg.get("orientation", "portrait"), cfg.get("brightness", 40)
+        port, orient = cfg.get("port", "AUTO"), cfg.get("orientation", "portrait")
         if (port, orient) != (s.port, s.orientation):
-            s.port, s.orientation, s.brightness = port, orient, bright
+            s.port, s.orientation = port, orient
             s.close()  # reopened on the next tick with the new parameters
-        elif bright != s.brightness:
-            s.brightness = bright
-            if s.ser and not self.screen_off:
-                try:
-                    s.set_brightness(bright)
-                except (serial.SerialException, OSError):
-                    s.close()
+        self.apply_brightness()
         self.prev = None
 
         for h in self.hotkeys:  # keyboard.unhook_all_hotkeys() crashes when none are registered
@@ -181,6 +192,18 @@ class App:
             self.idx = next((i for i, n in enumerate(names) if n.split("#")[0] == base), min(self.idx, len(view) - 1))
         if self.icon:
             self.icon.menu = tray_menu(self)
+
+    def apply_brightness(self):
+        """Day or night brightness; called on every tick so the switch happens at the set time."""
+        s, bright = self.screen, scheduled_brightness(self.cfg, datetime.now().time())
+        if bright == s.brightness:
+            return
+        s.brightness = bright  # a closed screen gets it when it reopens
+        if s.ser and not self.screen_off:
+            try:
+                s.set_brightness(bright)
+            except (serial.SerialException, OSError):
+                s.close()
 
     # --- navigation (callable from other threads: keyboard, tray) -------
     def call(self, fn):
@@ -212,13 +235,6 @@ class App:
         self.call(_quit)
 
     def auto_switch(self):
-        media = self.state.get("media")
-        playing = bool(media and media["playing"])
-        if self.cfg.get("media_focus", True) and playing and not self.was_playing:
-            for i, p in enumerate(self.view):
-                if p.name == "media":
-                    self.idx, self.last_switch = i, time.monotonic()
-        self.was_playing = playing
         rotate = self.cfg.get("rotate_seconds", 0)
         if rotate and time.monotonic() - self.last_switch >= rotate:
             self.idx = (self.idx + 1) % len(self.view)
@@ -238,7 +254,8 @@ class App:
             if page not in [p.name for p in self.pages]:
                 self.pages.append(self.all_pages[page])  # shown until the next config change
                 self.refresh_view()
-            self.idx = next(i for i, p in enumerate(self.view) if p.name.split("#")[0] == page)
+            # a page hidden for lack of data (no song, no session) is not in the view: stay where we are
+            self.idx = next((i for i, p in enumerate(self.view) if p.name.split("#")[0] == page), self.idx)
             self.last_switch = time.monotonic()
 
     # --- main loop ------------------------------------------------------
@@ -257,14 +274,17 @@ class App:
             await asyncio.to_thread(self.screen.open)
             log.info("screen connected on %s", self.screen.ser.port)
             self.prev, self.screen_off, self.missing_since, self.alerted = None, False, None, False
-        if self.cfg.get("off_when_locked", True) and is_locked():
+        if self.suspended or (self.cfg.get("off_when_locked", True) and is_locked()):
             if not self.screen_off:
                 self.screen.power(False)
                 self.screen_off = True
+            if self.suspended:
+                self.slept.set()
             return
         if self.screen_off:
             self.screen.power(True)
             self.screen_off, self.prev = False, None
+        self.apply_brightness()
         self.refresh_view()
         self.auto_switch()
         page = self.view[self.idx]
@@ -327,6 +347,35 @@ class App:
         except (serial.SerialException, OSError):
             pass
         self.screen.close()
+        self.stopped.set()
+
+
+WM_QUERYENDSESSION, WM_ENDSESSION, WM_POWERBROADCAST = 0x0011, 0x0016, 0x0218
+PBT_APMSUSPEND, PBT_APMRESUMESUSPEND, PBT_APMRESUMEAUTOMATIC = 0x0004, 0x0007, 0x0012
+
+
+def handle_shutdown(app: App, icon):
+    """Windows logoff/shutdown kills the process without the normal quit path: switch the screen off first.
+
+    shortcut: hooks pystray's private _message_handlers of its hidden top-level window, recheck on pystray upgrades."""
+    def on_end(ended, lparam):
+        if ended:
+            log.info("Windows is shutting down: switching the screen off")
+            app.quit()
+            app.stopped.wait(5)  # the process is terminated as soon as this handler returns
+        return 0
+    def on_power(event, lparam):
+        if event == PBT_APMSUSPEND:
+            log.info("Windows is going to sleep: switching the screen off")
+            app.slept.clear()
+            app.call(lambda: setattr(app, "suspended", True))
+            app.slept.wait(1.5)  # Windows sleeps soon after this handler returns
+        elif event in (PBT_APMRESUMESUSPEND, PBT_APMRESUMEAUTOMATIC):
+            app.call(lambda: setattr(app, "suspended", False))
+        return 1
+    icon._message_handlers[WM_QUERYENDSESSION] = lambda w, l: 1  # pystray's default 0 would veto the shutdown
+    icon._message_handlers[WM_ENDSESSION] = on_end
+    icon._message_handlers[WM_POWERBROADCAST] = on_power
 
 
 def tray_icon_image():
@@ -381,6 +430,7 @@ def main():
         app.loop = asyncio.get_running_loop()
         i18n.set_language(load_config().get("language", "it"))
         app.icon = pystray.Icon("turing-screen-studio", tray_icon_image(), paths.APP_NAME, tray_menu(app))
+        handle_shutdown(app, app.icon)
         app.icon.run_detached()
         await app.run()
     try:

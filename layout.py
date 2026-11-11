@@ -127,15 +127,16 @@ class AgentPage:
 
 
 def expand_pages(pages, state, limit=4):
-    """Per-agent layouts become one page per active session (at least one, showing 'no session')."""
+    """Per-agent layouts become one page per active session; agent pages without sessions and the media page
+    with nothing playing are left out (unless nothing else is left to show)."""
     out = []
     for p in pages:
         if getattr(p, "per_agent", False):
             keys = [s["key"] for s in (state.get("agents") or [])[:limit] if s.get("key")]
-            out += [AgentPage(p, k) for k in keys] or [AgentPage(p, None)]
-        else:
+            out += [AgentPage(p, k) for k in keys]
+        elif p.name != "media" or state.get("media"):
             out.append(p)
-    return out
+    return out or [AgentPage(p, None) if getattr(p, "per_agent", False) else p for p in pages[:1]]
 
 
 class HistoryRecorder:
