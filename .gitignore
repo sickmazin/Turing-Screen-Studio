@@ -12,3 +12,4 @@ dist/
 vendor/
 *.spec.bak
 codex.svg
+.idea/
